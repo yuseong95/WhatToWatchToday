@@ -157,7 +157,15 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
             // 임시로 기본 셀에 텍스트만 표시
             switch section {
             case .basicInfo:
-                cell.textLabel?.text = "개봉일: \(movie?.formattedReleaseDate ?? "") | 평점: \(movie?.formattedRating ?? "")"
+                // ✅ Custom Cell 사용으로 변경
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "BasicInfoCell", for: indexPath) as? BasicInfoTableViewCell else {
+                    return UITableViewCell()
+                }
+                
+                if let movie = movie {
+                    cell.configure(with: movie)
+                }
+                return cell
             case .detailInfo:
                 if let detail = movieDetailWithCredits {
                     cell.textLabel?.text = "상영시간: \(detail.formattedRuntime) | 장르: \(detail.genreString)"

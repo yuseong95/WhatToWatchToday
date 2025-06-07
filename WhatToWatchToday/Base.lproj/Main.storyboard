@@ -335,6 +335,41 @@
                                             <outlet property="titleLabel" destination="8tN-Us-VqE" id="uC3-5x-hoD"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="BasicInfoCell" id="4dP-Et-eN0" customClass="BasicInfoTableViewCell" customModule="WhatToWatchToday" customModuleProvider="target">
+                                        <rect key="frame" x="0.0" y="400" width="393" height="53.333332061767578"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="4dP-Et-eN0" id="NQg-QR-1fU">
+                                            <rect key="frame" x="0.0" y="0.0" width="393" height="53.333332061767578"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="er2-Ae-iN1">
+                                                    <rect key="frame" x="16" y="15.999999999999998" width="42" height="21.333333333333329"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="gO0-Og-xMO">
+                                                    <rect key="frame" x="335" y="15.999999999999998" width="42" height="21.333333333333329"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="er2-Ae-iN1" firstAttribute="leading" secondItem="NQg-QR-1fU" secondAttribute="leading" constant="16" id="3Yj-RK-16h"/>
+                                                <constraint firstItem="gO0-Og-xMO" firstAttribute="leading" secondItem="er2-Ae-iN1" secondAttribute="trailing" constant="8" id="KaP-EY-Rxl"/>
+                                                <constraint firstAttribute="bottom" secondItem="gO0-Og-xMO" secondAttribute="bottom" constant="16" id="Kla-IO-GK2"/>
+                                                <constraint firstAttribute="trailing" secondItem="gO0-Og-xMO" secondAttribute="trailing" constant="16" id="Rah-2B-M0K"/>
+                                                <constraint firstAttribute="bottom" secondItem="er2-Ae-iN1" secondAttribute="bottom" constant="16" id="iNn-nC-yze"/>
+                                                <constraint firstItem="er2-Ae-iN1" firstAttribute="top" secondItem="NQg-QR-1fU" secondAttribute="top" constant="16" id="pk7-Da-38l"/>
+                                                <constraint firstItem="gO0-Og-xMO" firstAttribute="top" secondItem="NQg-QR-1fU" secondAttribute="top" constant="16" id="tjr-ml-vQH"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="ratingLabel" destination="gO0-Og-xMO" id="P9F-au-Fng"/>
+                                            <outlet property="releaseDateLabel" destination="er2-Ae-iN1" id="pz3-TF-Koj"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </prototypes>
                             </tableView>
                         </subviews>
