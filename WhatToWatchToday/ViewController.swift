@@ -54,7 +54,7 @@ class ViewController: UIViewController {
         movieTableView.rowHeight = 120  // 포스터 이미지를 위해 높게 설정
     }
     
-    //ㅍSearch Bar 설정
+    // Search Bar 설정
     func setupSearchBar() {
         searchBar.delegate = self
         searchBar.placeholder = "영화 제목을 검색하세요"
@@ -149,8 +149,8 @@ class ViewController: UIViewController {
     
     // Segue 준비 (데이터 전달)
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "showMovieDetail",
-           let destinationVC = segue.destination as? MovieDetailViewController,
+        if segue.identifier == "showTableMovieDetail",
+           let destinationVC = segue.destination as? TableMovieDetailViewController,
            let indexPath = movieTableView.indexPathForSelectedRow {
             
             let selectedMovie = movies[indexPath.row]
