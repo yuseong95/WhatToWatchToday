@@ -128,6 +128,128 @@ class TMDBService {
             }
         }.resume()
     }
+    
+    // 영화 배우 정보 가져오기
+    func fetchMovieCredits(movieId: Int, completion: @escaping (Result<MovieCredits, TMDBError>) -> Void) {
+        
+        // 1. URL 만들기
+        guard let url = createURL(for: .movieCredits(id: movieId)) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("🎭 배우 정보 요청 URL: \(url)")
+        
+        // 2. API 요청 보내기
+        session.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                // 에러 체크
+                if let error = error {
+                    completion(.failure(.networkError(error)))
+                    return
+                }
+                
+                // 데이터 체크
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+                
+                // JSON 변환
+                do {
+                    let movieCredits = try JSONDecoder().decode(MovieCredits.self, from: data)
+                    print("✅ 배우 정보 로딩 완료: 배우 \(movieCredits.cast.count)명, 제작진 \(movieCredits.crew.count)명")
+                    completion(.success(movieCredits))
+                } catch {
+                    print("❌ MovieCredits 디코딩 에러: \(error)")
+                    completion(.failure(.decodingFailed))
+                }
+            }
+        }.resume()
+    }
+    
+    // 영화 상세 정보 + 배우 정보 한 번에 가져오기
+    func fetchMovieDetailWithCredits(movieId: Int, completion: @escaping (Result<MovieDetailWithCredits, TMDBError>) -> Void) {
+        
+        // 1. URL 만들기 (credits 정보 포함)
+        guard let url = createURLWithCredits(for: .movieDetails(id: movieId)) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("🎬 영화 상세정보 + 배우정보 요청 URL: \(url)")
+        
+        // 2. API 요청 보내기
+        session.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                // 에러 체크
+                if let error = error {
+                    completion(.failure(.networkError(error)))
+                    return
+                }
+                
+                // 데이터 체크
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+                
+                // JSON 변환
+                do {
+                    let movieDetailWithCredits = try JSONDecoder().decode(MovieDetailWithCredits.self, from: data)
+                    print("✅ 통합 정보 로딩 완료:")
+                    print("   제목: \(movieDetailWithCredits.title)")
+                    print("   상영시간: \(movieDetailWithCredits.formattedRuntime)")
+                    print("   장르: \(movieDetailWithCredits.genreString)")
+                    print("   주요 배우: \(movieDetailWithCredits.mainCast.count)명")
+                    print("   감독: \(movieDetailWithCredits.directorsString)")
+                    
+                    completion(.success(movieDetailWithCredits))
+                } catch {
+                    print("❌ MovieDetailWithCredits 디코딩 에러: \(error)")
+                    completion(.failure(.decodingFailed))
+                }
+            }
+        }.resume()
+    }
+    
+    private func createURLWithCredits(for endpoint: APIEndpoint, page: Int = 1, query: String? = nil) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.themoviedb.org"
+        
+        // 엔드포인트별 경로 설정
+        switch endpoint {
+        case .popularMovies:
+            components.path = "/3/movie/popular"
+        case .searchMovies:
+            components.path = "/3/search/movie"
+        case .movieDetails(let id):
+            components.path = "/3/movie/\(id)"
+        case .movieCredits(let id):
+            components.path = "/3/movie/\(id)/credits"
+        }
+        
+        // 쿼리 파라미터 추가
+        var queryItems = [
+            URLQueryItem(name: "api_key", value: Config.tmdbAPIKey),
+            URLQueryItem(name: "language", value: "ko-KR"),
+            URLQueryItem(name: "page", value: "\(page)")
+        ]
+        
+        // 🎭 영화 상세정보일 때 credits 정보도 함께 요청
+        if case .movieDetails = endpoint {
+            queryItems.append(URLQueryItem(name: "append_to_response", value: "credits"))
+        }
+        
+        // 검색어가 있으면 추가
+        if let query = query {
+            queryItems.append(URLQueryItem(name: "query", value: query))
+        }
+        
+        components.queryItems = queryItems
+        return components.url
+    }
 }
 
 // 헬퍼 메서드들
@@ -138,6 +260,7 @@ private extension TMDBService {
         case popularMovies
         case searchMovies
         case movieDetails(id: Int)
+        case movieCredits(id: Int)
     }
     
     // URL 생성하기
@@ -154,6 +277,8 @@ private extension TMDBService {
             components.path = "/3/search/movie"
         case .movieDetails(let id):
             components.path = "/3/movie/\(id)"
+        case .movieCredits(let id):
+            components.path = "/3/movie/\(id)/credits"
         }
         
         // 쿼리 파라미터 추가

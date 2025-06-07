@@ -21,9 +21,12 @@ class MovieDetailViewController: UIViewController {
     @IBOutlet weak var favoriteButton: UIButton!
     @IBOutlet weak var runtimeLabel: UILabel!
     @IBOutlet weak var genreLabel: UILabel!
+    @IBOutlet weak var castTitleLabel: UILabel!
+    @IBOutlet weak var castCollectionView: UICollectionView!
     
     var movie: Movie?  // 이전 화면에서 전달받을 영화 정보
-    var movieDetail: MovieDetail?
+    // var movieDetail: MovieDetail?
+    var movieDetailWithCredits: MovieDetailWithCredits?
     var isOverviewExpanded = false
     var fullOverviewText = ""
     
@@ -31,6 +34,7 @@ class MovieDetailViewController: UIViewController {
         super.viewDidLoad()
         
         setupUI()
+        setupCollectionView()
         displayMovieInfo()
         loadMovieDetail()
     }
@@ -81,18 +85,23 @@ class MovieDetailViewController: UIViewController {
         print("🎬 영화 상세 정보 표시: \(movie.title)")
     }
     
+    // ✅ 3단계: displayDetailInfo 메서드 수정
     func displayDetailInfo() {
-        guard let movieDetail = movieDetail else { return }
+        guard let movieDetailWithCredits = movieDetailWithCredits else { return }
         
         print("🎬 상세 정보 UI 업데이트:")
-        print("   상영시간: \(movieDetail.formattedRuntime)")
-        print("   장르: \(movieDetail.genreString)")
+        print("   상영시간: \(movieDetailWithCredits.formattedRuntime)")
+        print("   장르: \(movieDetailWithCredits.genreString)")
+        print("   감독: \(movieDetailWithCredits.directorsString)")
         
         // 상영시간 표시
-        runtimeLabel.text = "🕒 \(movieDetail.formattedRuntime)"
+        runtimeLabel.text = "🕒 \(movieDetailWithCredits.formattedRuntime)"
         
         // 장르 표시
-        genreLabel.text = "장르: \(movieDetail.genreString)"
+        genreLabel.text = "장르: \(movieDetailWithCredits.genreString)"
+        
+        // 감독 정보 표시 (만약 감독 라벨이 있다면)
+        // directorLabel.text = "감독: \(movieDetailWithCredits.directorsString)"
     }
     
     // 줄거리 접기/펼치기 기능
@@ -114,6 +123,23 @@ class MovieDetailViewController: UIViewController {
         }
     }
     
+    func setupCollectionView() {
+        // 델리게이트 설정
+        castCollectionView.delegate = self
+        castCollectionView.dataSource = self
+        
+        // 셀 크기 및 간격 설정
+        if let layout = castCollectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            layout.itemSize = CGSize(width: 80, height: 150)
+            layout.minimumInteritemSpacing = 8
+            layout.minimumLineSpacing = 8
+            layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        }
+        
+        print("🎬 CollectionView 설정 완료")
+    }
+
+    
     func loadPosterImage() {
         guard let movie = movie else { return }
         
@@ -132,26 +158,52 @@ class MovieDetailViewController: UIViewController {
     func loadMovieDetail() {
         guard let movie = movie else { return }
         
-        print("🔍 영화 상세 정보 로딩 시작: \(movie.title)")
+        print("🔍 영화 상세 정보 + 배우 정보 로딩 시작: \(movie.title)")
         
-        TMDBService.shared.fetchMovieDetail(movieId: movie.id) { [weak self] result in
+        // 🆕 새로운 통합 API 사용
+        TMDBService.shared.fetchMovieDetailWithCredits(movieId: movie.id) { [weak self] result in
             switch result {
-            case .success(let movieDetail):
-                print("✅ 상세 정보 로딩 완료")
-                print("   상영시간: \(movieDetail.formattedRuntime)")
-                print("   장르: \(movieDetail.genreString)")
+            case .success(let movieDetailWithCredits):
+                print("✅ 통합 정보 로딩 완료")
+                print("   상영시간: \(movieDetailWithCredits.formattedRuntime)")
+                print("   장르: \(movieDetailWithCredits.genreString)")
+                print("   주요 배우: \(movieDetailWithCredits.mainCast.count)명")
+                print("   감독: \(movieDetailWithCredits.directorsString)")
                 
-                self?.movieDetail = movieDetail
+                self?.movieDetailWithCredits = movieDetailWithCredits
                 
-                // UI 업데이트 추가
+                // UI 업데이트
                 DispatchQueue.main.async {
                     self?.displayDetailInfo()
+                    self?.displayCastInfo()
                 }
                 
             case .failure(let error):
-                print("❌ 상세 정보 로딩 실패: \(error)")
+                print("❌ 통합 정보 로딩 실패: \(error)")
             }
         }
+    }
+    
+    func displayCastInfo() {
+        guard let movieDetailWithCredits = movieDetailWithCredits else { return }
+        
+        let mainCast = movieDetailWithCredits.mainCast
+        let directors = movieDetailWithCredits.directors
+        
+        print("🎭 배우 정보 표시:")
+        print("   주요 배우 \(mainCast.count)명:")
+        for (index, actor) in mainCast.enumerated() {
+            print("     \(index + 1). \(actor.name) (\(actor.character))")
+        }
+        
+        print("   감독 \(directors.count)명:")
+        for director in directors {
+            print("     - \(director.name)")
+        }
+        
+        // 🎬 CollectionView 새로고침
+        castCollectionView.reloadData()
+        print("🔄 CollectionView 데이터 새로고침 완료")
     }
     
     // 찜하기 기능 (임시)
@@ -175,5 +227,38 @@ class MovieDetailViewController: UIViewController {
         }
         
         print("📖 줄거리 상태: \(isOverviewExpanded ? "펼침" : "접음")")
+    }
+}
+
+// UICollectionViewDataSource & UICollectionViewDelegate
+extension MovieDetailViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+    
+    // 셀 개수
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return movieDetailWithCredits?.mainCast.count ?? 0
+    }
+    
+    // 셀 설정
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "CastCell", for: indexPath) as? CastCollectionViewCell else {
+            print("❌ CastCollectionViewCell 로딩 실패")
+            return UICollectionViewCell()
+        }
+        
+        if let cast = movieDetailWithCredits?.mainCast[indexPath.item] {
+            cell.configure(with: cast)
+            print("✅ 배우 셀 설정: \(cast.name)")
+        }
+        
+        return cell
+    }
+    
+    // 셀 선택 (선택사항)
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if let cast = movieDetailWithCredits?.mainCast[indexPath.item] {
+            print("🎭 선택된 배우: \(cast.name) (\(cast.character))")
+            // 나중에 배우 상세 화면으로 이동하는 코드 추가 가능
+        }
     }
 }
