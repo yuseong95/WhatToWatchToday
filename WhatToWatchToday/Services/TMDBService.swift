@@ -58,7 +58,7 @@ class TMDBService {
         performRequest(url: url, completion: completion)
     }
     
-    // 영화 상세 정보 가져오기
+    // 영화 상세 정보 가져오기 (기본 Movie 타입)
     func fetchMovieDetails(movieId: Int, completion: @escaping (Result<Movie, TMDBError>) -> Void) {
         
         // 1. URL 만들기
@@ -87,6 +87,42 @@ class TMDBService {
                     let movie = try JSONDecoder().decode(Movie.self, from: data)
                     completion(.success(movie))
                 } catch {
+                    completion(.failure(.decodingFailed))
+                }
+            }
+        }.resume()
+    }
+    
+    // 영화 상세 정보 가져오기 (확장된 MovieDetail 타입)
+    func fetchMovieDetail(movieId: Int, completion: @escaping (Result<MovieDetail, TMDBError>) -> Void) {
+        
+        // 1. URL 만들기
+        guard let url = createURL(for: .movieDetails(id: movieId)) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        // 2. API 요청 보내기 (MovieDetail 타입으로)
+        session.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                // 에러 체크
+                if let error = error {
+                    completion(.failure(.networkError(error)))
+                    return
+                }
+                
+                // 데이터 체크
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+                
+                // JSON 변환 (MovieDetail로)
+                do {
+                    let movieDetail = try JSONDecoder().decode(MovieDetail.self, from: data)
+                    completion(.success(movieDetail))
+                } catch {
+                    print("MovieDetail 디코딩 에러: \(error)")
                     completion(.failure(.decodingFailed))
                 }
             }
@@ -167,26 +203,3 @@ private extension TMDBService {
         }.resume() // 요청 시작!
     }
 }
-
-// 사용 예시 (주석)
-/*
- // 인기 영화 가져오기
- TMDBService.shared.fetchPopularMovies { result in
-     switch result {
-     case .success(let movieResponse):
-         print("영화 \(movieResponse.results.count)개 받아옴")
-     case .failure(let error):
-         print("에러: \(error)")
-     }
- }
- 
- // 영화 검색하기
- TMDBService.shared.searchMovies(query: "아바타") { result in
-     switch result {
-     case .success(let movieResponse):
-         print("검색 결과: \(movieResponse.results.count)개")
-     case .failure(let error):
-         print("검색 에러: \(error)")
-     }
- }
-*/
