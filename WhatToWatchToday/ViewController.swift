@@ -147,6 +147,18 @@ class ViewController: UIViewController {
         present(alert, animated: true)
     }
     
+    // Segue 준비 (데이터 전달)
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "showMovieDetail",
+           let destinationVC = segue.destination as? MovieDetailViewController,
+           let indexPath = movieTableView.indexPathForSelectedRow {
+            
+            let selectedMovie = movies[indexPath.row]
+            destinationVC.movie = selectedMovie
+            print("📤 영화 데이터 전달: \(selectedMovie.title)")
+        }
+    }
+    
     // 헬퍼 메서드들
     
     // 고정 크기의 플레이스홀더 이미지 생성
@@ -247,17 +259,6 @@ extension ViewController: UITableViewDelegate {
         
         let selectedMovie = movies[indexPath.row]
         print("🎯 선택된 영화: \(selectedMovie.title)")
-        
-        // 나중에 상세 화면으로 이동하는 코드 추가 예정
-        
-        // 임시로 알림 표시
-        let alert = UIAlertController(
-            title: selectedMovie.title,
-            message: selectedMovie.overview,
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
-        present(alert, animated: true)
     }
 }
 
