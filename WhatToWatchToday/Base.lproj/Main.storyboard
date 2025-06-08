@@ -17,7 +17,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="aJ2-NM-Zvb">
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="aJ2-NM-Zvb">
                                 <rect key="frame" x="0.0" y="103" width="393" height="715"/>
                                 <subviews>
                                     <searchBar contentMode="redraw" translatesAutoresizingMaskIntoConstraints="NO" id="fsc-hy-4fH">
@@ -27,8 +27,22 @@
                                             <outlet property="delegate" destination="BYZ-38-t0r" id="MWv-1N-1LR"/>
                                         </connections>
                                     </searchBar>
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="3XY-vR-gnu">
+                                        <rect key="frame" x="0.0" y="64" width="393" height="33"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="32" id="cIl-jP-QVK"/>
+                                        </constraints>
+                                        <segments>
+                                            <segment title="🎬 인기 영화"/>
+                                            <segment title="📺 한국TV"/>
+                                            <segment title="❤️ 찜목록"/>
+                                        </segments>
+                                        <connections>
+                                            <action selector="categoryChanged:" destination="BYZ-38-t0r" eventType="valueChanged" id="Ogs-I2-3w2"/>
+                                        </connections>
+                                    </segmentedControl>
                                     <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="-1" estimatedSectionHeaderHeight="-1" sectionFooterHeight="-1" estimatedSectionFooterHeight="-1" translatesAutoresizingMaskIntoConstraints="NO" id="bev-Ca-Typ">
-                                        <rect key="frame" x="0.0" y="56" width="393" height="659"/>
+                                        <rect key="frame" x="0.0" y="104" width="393" height="611"/>
                                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                                         <prototypes>
                                             <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="MovieCell" textLabel="Y0T-qO-rrB" detailTextLabel="0mu-6x-Tas" style="IBUITableViewCellStyleSubtitle" id="HCb-ry-R9x">
@@ -74,6 +88,7 @@
                     </view>
                     <navigationItem key="navigationItem" id="BAZ-cV-0XM"/>
                     <connections>
+                        <outlet property="categorySegmentedControl" destination="3XY-vR-gnu" id="VjG-lw-JAD"/>
                         <outlet property="movieTableView" destination="bev-Ca-Typ" id="t3k-6b-8hh"/>
                         <outlet property="searchBar" destination="fsc-hy-4fH" id="sxt-BZ-RYS"/>
                     </connections>
@@ -336,20 +351,20 @@
                                         </connections>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="BasicInfoCell" id="4dP-Et-eN0" customClass="BasicInfoTableViewCell" customModule="WhatToWatchToday" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="400" width="393" height="52.666667938232422"/>
+                                        <rect key="frame" x="0.0" y="400" width="393" height="53.333332061767578"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="4dP-Et-eN0" id="NQg-QR-1fU">
-                                            <rect key="frame" x="0.0" y="0.0" width="393" height="52.666667938232422"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="393" height="53.333332061767578"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="er2-Ae-iN1">
-                                                    <rect key="frame" x="16" y="16" width="42" height="20.666666666666671"/>
+                                                    <rect key="frame" x="16" y="15.999999999999998" width="42" height="21.333333333333329"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="gO0-Og-xMO">
-                                                    <rect key="frame" x="66" y="16" width="311" height="20.666666666666671"/>
+                                                    <rect key="frame" x="66" y="15.999999999999998" width="311" height="21.333333333333329"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
@@ -371,20 +386,20 @@
                                         </connections>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="DetailInfoCell" id="qHz-HQ-O57" customClass="DetailInfoTableViewCell" customModule="WhatToWatchToday" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="452.66666793823242" width="393" height="53"/>
+                                        <rect key="frame" x="0.0" y="453.33333206176758" width="393" height="53.666667938232422"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="qHz-HQ-O57" id="RJ6-Fk-hBH">
-                                            <rect key="frame" x="0.0" y="0.0" width="393" height="53"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="393" height="53.666667938232422"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="dIV-0b-WNP">
-                                                    <rect key="frame" x="16" y="16" width="161" height="21"/>
+                                                    <rect key="frame" x="16" y="16" width="161" height="21.666666666666671"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Xip-37-b35">
-                                                    <rect key="frame" x="216" y="16" width="161" height="21"/>
+                                                    <rect key="frame" x="216" y="16" width="161" height="21.666666666666671"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
@@ -408,20 +423,20 @@
                                         </connections>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="OverviewCell" id="hD7-tW-Vlj" customClass="OverviewTableViewCell" customModule="WhatToWatchToday" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="505.66666793823242" width="393" height="107"/>
+                                        <rect key="frame" x="0.0" y="507" width="393" height="107.66666412353516"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="hD7-tW-Vlj" id="80z-kD-61Z">
-                                            <rect key="frame" x="0.0" y="0.0" width="393" height="107"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="393" height="107.66666412353516"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="0te-9L-nd4">
-                                                    <rect key="frame" x="36" y="27" width="321" height="21"/>
+                                                    <rect key="frame" x="36" y="27" width="321" height="21.666666666666671"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
                                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="G7B-Gs-ELS">
-                                                    <rect key="frame" x="159" y="56" width="75" height="35"/>
+                                                    <rect key="frame" x="159" y="56.666666666666657" width="75" height="35"/>
                                                     <constraints>
                                                         <constraint firstAttribute="height" constant="35" id="fk8-sB-lht"/>
                                                     </constraints>
@@ -447,7 +462,7 @@
                                         </connections>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="CastCell" id="6MV-Yq-BPl" customClass="CastTableViewCell" customModule="WhatToWatchToday" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="612.66666793823242" width="393" height="16.333333969116211"/>
+                                        <rect key="frame" x="0.0" y="614.66666412353516" width="393" height="16.333333969116211"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="6MV-Yq-BPl" id="jzX-Zj-FeG">
                                             <rect key="frame" x="0.0" y="0.0" width="393" height="16.333333969116211"/>

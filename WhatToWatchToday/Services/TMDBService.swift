@@ -26,18 +26,20 @@ class TMDBService {
     // URL 세션 (네트워크 통신을 위한 객체)
     private let session = URLSession.shared
     
-    // 인기 영화 목록 가져오기
+    // 인기 영화 목록 가져오기 (한국 지역)
     func fetchPopularMovies(page: Int = 1, completion: @escaping (Result<MovieResponse, TMDBError>) -> Void) {
         
-        // 1. URL 만들기
-        guard let url = createURL(for: .popularMovies, page: page) else {
+        // 한국 지역 파라미터 추가
+        guard let url = createURL(for: .popularMovies, page: page, region: "KR") else {
             completion(.failure(.invalidURL))
             return
         }
         
-        // 2. API 요청 보내기
+        print("🎬 인기 영화 로딩 (한국): \(url)")
+        
         performRequest(url: url, completion: completion)
     }
+
     
     // 영화 검색하기
     func searchMovies(query: String, page: Int = 1, completion: @escaping (Result<MovieResponse, TMDBError>) -> Void) {
@@ -302,18 +304,18 @@ class TMDBService {
         }.resume()
     }
 
-    // 인기 TV 프로그램 목록 가져오기
+    // 인기 TV 프로그램 목록 가져오기 (한국 원산지)
     func fetchPopularTV(page: Int = 1, completion: @escaping (Result<MultiSearchResponse, TMDBError>) -> Void) {
         
-        // 1. URL 만들기
-        guard let url = createURL(for: .popularTV, page: page) else {
+        // 1. Discover TV API로 변경 + 한국 원산지 필터
+        guard let url = createKoreanTVURL(page: page) else {
             completion(.failure(.invalidURL))
             return
         }
         
-        print("📺 인기 TV 프로그램 로딩: \(url)")
+        print("📺 한국 TV 프로그램 로딩 (원산지 필터): \(url)")
         
-        // 2. API 요청 보내기 (일단 기본 구현)
+        // 2. API 요청 보내기
         session.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
@@ -326,12 +328,68 @@ class TMDBService {
                     return
                 }
                 
-                // TODO: TV 응답을 MultiSearchResponse 형태로 변환 필요
-                // 일단 간단하게 빈 응답 반환
-                let emptyResponse = MultiSearchResponse(page: 1, results: [], totalPages: 1, totalResults: 0)
-                completion(.success(emptyResponse))
+                // TV 응답을 MultiSearchResponse로 변환
+                do {
+                    let tvResponse = try JSONDecoder().decode(TVResponse.self, from: data)
+                    
+                    // TV를 MediaItem으로 변환
+                    let mediaItems = tvResponse.results.map { tv in
+                        MediaItem(
+                            id: tv.id,
+                            mediaType: "tv",
+                            title: nil,
+                            name: tv.name,
+                            overview: tv.overview,
+                            releaseDate: nil,
+                            firstAirDate: tv.firstAirDate,
+                            posterPath: tv.posterPath,
+                            backdropPath: tv.backdropPath,
+                            voteAverage: tv.voteAverage,
+                            voteCount: tv.voteCount,
+                            popularity: tv.popularity,
+                            genreIds: tv.genreIds,
+                            adult: tv.adult,
+                            originalLanguage: tv.originalLanguage,
+                            originalTitle: nil,
+                            originalName: tv.originalName
+                        )
+                    }
+                    
+                    let multiSearchResponse = MultiSearchResponse(
+                        page: tvResponse.page,
+                        results: mediaItems,
+                        totalPages: tvResponse.totalPages,
+                        totalResults: tvResponse.totalResults
+                    )
+                    
+                    print("✅ TV 프로그램 \(mediaItems.count)개 로딩 완료!")
+                    completion(.success(multiSearchResponse))
+                    
+                } catch {
+                    print("❌ TV 응답 디코딩 에러: \(error)")
+                    completion(.failure(.decodingFailed))
+                }
             }
         }.resume()
+    }
+    
+    // 한국 TV 전용 URL 생성
+    private func createKoreanTVURL(page: Int) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.themoviedb.org"
+        components.path = "/3/discover/tv"
+        
+        let queryItems = [
+            URLQueryItem(name: "api_key", value: Config.tmdbAPIKey),
+            URLQueryItem(name: "language", value: "ko-KR"),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "sort_by", value: "popularity.desc"),
+            URLQueryItem(name: "with_origin_country", value: "KR")
+        ]
+        
+        components.queryItems = queryItems
+        return components.url
     }
     
     private func createURLWithCredits(for endpoint: APIEndpoint, page: Int = 1, query: String? = nil) -> URL? {
@@ -401,7 +459,7 @@ private extension TMDBService {
     }
     
     // URL 생성하기
-    func createURL(for endpoint: APIEndpoint, page: Int = 1, query: String? = nil) -> URL? {
+    func createURL(for endpoint: APIEndpoint, page: Int = 1, query: String? = nil, region: String? = nil) -> URL? {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "api.themoviedb.org"
@@ -429,9 +487,14 @@ private extension TMDBService {
         // 쿼리 파라미터 추가
         var queryItems = [
             URLQueryItem(name: "api_key", value: Config.tmdbAPIKey),
-            URLQueryItem(name: "language", value: "ko-KR"),  // 한국어
+            URLQueryItem(name: "language", value: "ko-KR"),
             URLQueryItem(name: "page", value: "\(page)")
         ]
+        
+        // 지역 파라미터 추가 (인기 목록용)
+        if let region = region {
+            queryItems.append(URLQueryItem(name: "region", value: region))
+        }
         
         // 검색어가 있으면 추가
         if let query = query {

@@ -13,9 +13,26 @@ class ViewController: UIViewController {
     
     @IBOutlet weak var movieTableView: UITableView!
     @IBOutlet weak var searchBar: UISearchBar!  // 새로 추가된 Storyboard Search Bar
-    
+    @IBOutlet weak var categorySegmentedControl: UISegmentedControl!
+
     var mediaItems: [MediaItem] = []  // 미디어 데이터를 저장할 배열
     var allMediaItems: [MediaItem] = []  // 전체 미디어 목록 (검색용)
+    
+    enum MediaCategory: Int, CaseIterable {
+        case movie = 0    // 🎬 영화 순위
+        case tv = 1       // 📺 TV 순위
+        case favorites = 2 // ❤️ 내 찜 목록
+        
+        var title: String {
+            switch self {
+            case .movie: return "🎬 영화 순위"
+            case .tv: return "📺 TV 순위"
+            case .favorites: return "❤️ 내 찜 목록"
+            }
+        }
+    }
+    
+    var currentCategory: MediaCategory = .movie
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,7 +40,7 @@ class ViewController: UIViewController {
         setupUI()
         setupTableView()
         setupSearchBar()  // Search Bar 설정 추가
-        loadPopularMedia()
+        loadDataForCategory(currentCategory)
     }
     
     func setupUI() {
@@ -35,6 +52,10 @@ class ViewController: UIViewController {
         
         // 배경색 설정
         view.backgroundColor = .systemBackground
+        
+        // 카테고리 초기 설정
+        categorySegmentedControl.selectedSegmentIndex = currentCategory.rawValue
+        print("🏠 초기 카테고리: \(currentCategory.title)")
     }
     
     // TableView 설정
@@ -61,57 +82,6 @@ class ViewController: UIViewController {
         searchBar.searchBarStyle = .minimal
         searchBar.showsCancelButton = false
     }
-    
-    // 데이터 로딩 (기존 메서드 이름 변경)
-    func loadPopularMedia() {
-        print("🎬 인기 영화 목록 로딩 시작...")
-        
-        // 일단 영화만 먼저 (나중에 TV도 추가)
-        TMDBService.shared.fetchPopularMovies { [weak self] result in
-            switch result {
-            case .success(let movieResponse):
-                print("✅ 영화 \(movieResponse.results.count)개 로딩 완료!")
-                
-                // Movie를 MediaItem으로 변환
-                let mediaItems = movieResponse.results.map { movie in
-                    self?.convertMovieToMediaItem(movie) ?? MediaItem(
-                        id: movie.id,
-                        mediaType: "movie",
-                        title: movie.title,
-                        name: nil,
-                        overview: movie.overview,
-                        releaseDate: movie.releaseDate,
-                        firstAirDate: nil,
-                        posterPath: movie.posterPath,
-                        backdropPath: movie.backdropPath,
-                        voteAverage: movie.voteAverage,
-                        voteCount: movie.voteCount,
-                        popularity: movie.popularity,
-                        genreIds: movie.genreIds,
-                        adult: movie.adult,
-                        originalLanguage: movie.originalLanguage,
-                        originalTitle: movie.originalTitle,
-                        originalName: nil
-                    )
-                }
-                
-                DispatchQueue.main.async {
-                    self?.allMediaItems = mediaItems
-                    self?.mediaItems = mediaItems
-                    self?.movieTableView.reloadData()
-                }
-                
-            case .failure(let error):
-                print("❌ 영화 로딩 실패: \(error)")
-                
-                DispatchQueue.main.async {
-                    self?.showErrorAlert(error: error)
-                }
-            }
-        }
-    }
-    
-
     
     // 검색 기능 (MultiSearch 사용)
     func searchMedia(query: String) {
@@ -141,6 +111,90 @@ class ViewController: UIViewController {
         }
     }
     
+    @IBAction func categoryChanged(_ sender: UISegmentedControl) {
+        guard let category = MediaCategory(rawValue: sender.selectedSegmentIndex) else { return }
+        
+        currentCategory = category
+        print("🔄 카테고리 변경: \(category.title)")
+        
+        // 카테고리별 데이터 로딩
+        loadDataForCategory(category)
+    }
+    
+    func loadDataForCategory(_ category: MediaCategory) {
+        switch category {
+        case .movie:
+            loadPopularMovies()
+        case .tv:
+            loadPopularTV()
+        case .favorites:
+            loadFavorites()
+        }
+    }
+    
+    func loadPopularMovies() {
+        print("🎬 인기 영화 로딩...")
+        
+        TMDBService.shared.fetchPopularMovies { [weak self] result in
+            switch result {
+            case .success(let movieResponse):
+                print("✅ 영화 \(movieResponse.results.count)개 로딩 완료!")
+                
+                // ✅ 영화 20개 전체 사용
+                let mediaItems = movieResponse.results.map { movie in
+                    self?.convertMovieToMediaItem(movie) ?? MediaItem(
+                        id: movie.id, mediaType: "movie", title: movie.title, name: nil,
+                        overview: movie.overview, releaseDate: movie.releaseDate, firstAirDate: nil,
+                        posterPath: movie.posterPath, backdropPath: movie.backdropPath,
+                        voteAverage: movie.voteAverage, voteCount: movie.voteCount,
+                        popularity: movie.popularity, genreIds: movie.genreIds, adult: movie.adult,
+                        originalLanguage: movie.originalLanguage, originalTitle: movie.originalTitle, originalName: nil
+                    )
+                }
+                
+                DispatchQueue.main.async {
+                    self?.allMediaItems = mediaItems
+                    self?.mediaItems = mediaItems
+                    self?.movieTableView.reloadData()
+                }
+                
+            case .failure(let error):
+                print("❌ 영화 로딩 실패: \(error)")
+                DispatchQueue.main.async {
+                    self?.showErrorAlert(error: error)
+                }
+            }
+        }
+    }
+    
+    func loadPopularTV() {
+        print("📺 인기 TV 프로그램 로딩...")
+        // TODO: TV 프로그램 로딩 (나중에 구현)
+        TMDBService.shared.fetchPopularTV { [weak self] result in
+            switch result {
+            case .success(let response):
+                DispatchQueue.main.async {
+                    self?.mediaItems = response.results
+                    self?.movieTableView.reloadData()
+                }
+            case .failure(let error):
+                print("❌ TV 로딩 실패: \(error)")
+            }
+        }
+    }
+    
+    func loadFavorites() {
+        print("❤️ 찜 목록 로딩...")
+        // TODO: 나중에 실제 찜 기능 구현
+        // 일단 빈 목록으로
+        DispatchQueue.main.async {
+            self.mediaItems = []
+            self.movieTableView.reloadData()
+            print("✅ 찜 목록: 0개 (아직 구현 안됨)")
+        }
+    }
+
+    
     // 에러 처리
     func showErrorAlert(error: TMDBError) {
         let message: String
@@ -163,7 +217,7 @@ class ViewController: UIViewController {
         )
         
         alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { _ in
-            self.loadPopularMedia()
+            self.loadDataForCategory(self.currentCategory)
         })
         
         alert.addAction(UIAlertAction(title: "확인", style: .cancel))
