@@ -50,8 +50,21 @@ class TableMovieDetailViewController: UIViewController {
         
         displayMovieInfo()
         loadMediaDetail()
+        
+        // 찜 목록 변경 알림 구독
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(favoritesDidChange),
+            name: FavoriteManager.favoritesDidChange,
+            object: nil
+        )
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // Setup Methods
     func setupUI() {
         view.backgroundColor = .systemBackground
         navigationItem.largeTitleDisplayMode = .never
@@ -74,6 +87,7 @@ class TableMovieDetailViewController: UIViewController {
         print("🎬 TableView 설정 완료")
     }
     
+    // Data Loading Methods
     func displayMovieInfo() {
         guard let movie = movie else {
             print("❌ 영화 정보가 없습니다")
@@ -127,6 +141,40 @@ class TableMovieDetailViewController: UIViewController {
             }
         }
     }
+    
+    // Favorite Methods
+    @objc func favoritesDidChange() {
+        DispatchQueue.main.async {
+            // 찜하기 버튼이 있는 섹션만 업데이트
+            let favoriteIndexPath = IndexPath(row: 0, section: Section.favorite.rawValue)
+            if self.tableView.numberOfSections > favoriteIndexPath.section {
+                self.tableView.reloadRows(at: [favoriteIndexPath], with: .none)
+            }
+        }
+    }
+    
+    func toggleFavorite() {
+        guard let movie = movie else { return }
+        
+        let favoriteItem = FavoriteItem(from: movie, mediaType: mediaType)
+        let isNowFavorite = FavoriteManager.shared.toggleFavorite(for: favoriteItem)
+        
+        // 피드백 제공
+        let message = isNowFavorite ? "찜 목록에 추가되었습니다! ❤️" : "찜 목록에서 제거되었습니다 💔"
+        showToast(message: message)
+        
+        print("🔄 찜하기 토글: \(movie.title) - \(isNowFavorite ? "추가" : "제거")")
+    }
+    
+    func showToast(message: String) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        present(alert, animated: true)
+        
+        // 1.5초 후 자동으로 사라지게
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            alert.dismiss(animated: true)
+        }
+    }
 }
 
 // UITableViewDataSource & UITableViewDelegate
@@ -153,6 +201,8 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
             return UITableView.automaticDimension  // 줄거리는 펼침/접힘에 따라
         case .cast:
             return 180  // 배우 정보는 180pt
+        case .favorite:
+            return 80   // 찜하기 버튼은 80pt
         default:
             return 60   // 나머지는 60pt
         }
@@ -175,72 +225,75 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
             }
             return cell
             
-        default:
-            // 나머지는 임시로 기본 셀 사용 (일단 UITableViewCell() 으로)
-            let cell = UITableViewCell()
-            
-            // 임시로 기본 셀에 텍스트만 표시
-            switch section {
-            case .basicInfo:
-                // ✅ Custom Cell 사용으로 변경
-                guard let cell = tableView.dequeueReusableCell(withIdentifier: "BasicInfoCell", for: indexPath) as? BasicInfoTableViewCell else {
-                    return UITableViewCell()
-                }
-                
-                if let movie = movie {
-                    cell.configure(with: movie)
-                }
-                return cell
-            case .detailInfo:
-                // ✅ Custom Cell 사용으로 변경
-                guard let cell = tableView.dequeueReusableCell(withIdentifier: "DetailInfoCell", for: indexPath) as? DetailInfoTableViewCell else {
-                    return UITableViewCell()
-                }
-                
-                // ✅ 영화와 TV 구분해서 처리
-                if mediaType == "tv", let tvDetail = tvDetail {
-                    cell.configureForTV(with: tvDetail)  // TV용 configure 메서드 (나중에 추가)
-                } else if let detail = movieDetailWithCredits {
-                    cell.configure(with: detail)  // 기존 영화용
-                }
-                return cell
-            case .overview:
-                // ✅ Custom Cell 사용으로 변경
-                guard let cell = tableView.dequeueReusableCell(withIdentifier: "OverviewCell", for: indexPath) as? OverviewTableViewCell else {
-                    return UITableViewCell()
-                }
-                
-                cell.configure(
-                    with: fullOverviewText,
-                    isExpanded: isOverviewExpanded,
-                    toggleAction: { [weak self] in
-                        self?.isOverviewExpanded.toggle()
-                        self?.tableView.reloadRows(at: [indexPath], with: .automatic)
-                    }
-                )
-                return cell
-            case .cast:
-                // ✅ Custom Cell 사용으로 변경
-                guard let cell = tableView.dequeueReusableCell(withIdentifier: "CastCell", for: indexPath) as? CastTableViewCell else {
-                    return UITableViewCell()
-                }
-                
-                // ✅ 영화와 TV 구분해서 처리
-                if mediaType == "tv", let tvDetail = tvDetail {
-                    let mainCast = Array((tvDetail.credits?.cast ?? []).prefix(10))  // TV용 주요 배우
-                    cell.configure(with: mainCast)
-                } else if let detail = movieDetailWithCredits {
-                    cell.configure(with: detail.mainCast)  // 기존 영화용
-                }
-                return cell
-            case .favorite:
-                cell.textLabel?.text = "❤️ 찜하기"
-                cell.textLabel?.textAlignment = .center
-            default:
-                break
+        case .basicInfo:
+            // ✅ Custom Cell 사용으로 변경
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "BasicInfoCell", for: indexPath) as? BasicInfoTableViewCell else {
+                return UITableViewCell()
             }
             
-            cell.textLabel?.numberOfLines = 0
+            if let movie = movie {
+                cell.configure(with: movie)
+            }
+            return cell
+            
+        case .detailInfo:
+            // ✅ Custom Cell 사용으로 변경
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "DetailInfoCell", for: indexPath) as? DetailInfoTableViewCell else {
+                return UITableViewCell()
+            }
+            
+            // ✅ 영화와 TV 구분해서 처리
+            if mediaType == "tv", let tvDetail = tvDetail {
+                cell.configureForTV(with: tvDetail)  // TV용 configure 메서드
+            } else if let detail = movieDetailWithCredits {
+                cell.configure(with: detail)  // 기존 영화용
+            }
+            return cell
+            
+        case .overview:
+            // ✅ Custom Cell 사용으로 변경
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "OverviewCell", for: indexPath) as? OverviewTableViewCell else {
+                return UITableViewCell()
+            }
+            
+            cell.configure(
+                with: fullOverviewText,
+                isExpanded: isOverviewExpanded,
+                toggleAction: { [weak self] in
+                    self?.isOverviewExpanded.toggle()
+                    self?.tableView.reloadRows(at: [indexPath], with: .automatic)
+                }
+            )
+            return cell
+            
+        case .cast:
+            // ✅ Custom Cell 사용으로 변경
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "CastCell", for: indexPath) as? CastTableViewCell else {
+                return UITableViewCell()
+            }
+            
+            // ✅ 영화와 TV 구분해서 처리
+            if mediaType == "tv", let tvDetail = tvDetail {
+                let mainCast = Array((tvDetail.credits?.cast ?? []).prefix(10))  // TV용 주요 배우
+                cell.configure(with: mainCast)
+            } else if let detail = movieDetailWithCredits {
+                cell.configure(with: detail.mainCast)  // 기존 영화용
+            }
+            return cell
+            
+        case .favorite:
+            // ✅ Custom Cell 사용으로 변경
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "FavoriteCell", for: indexPath) as? FavoriteButtonTableViewCell else {
+                return UITableViewCell()
+            }
+            
+            guard let movie = movie else { return cell }
+            
+            let isFavorite = FavoriteManager.shared.isFavorite(movie, mediaType: mediaType)
+            
+            cell.configure(isFavorite: isFavorite) { [weak self] in
+                self?.toggleFavorite()
+            }
             return cell
         }
     }
@@ -262,7 +315,7 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
             print("📖 줄거리 상태: \(isOverviewExpanded ? "펼침" : "접음")")
         case .favorite:
             // 찜하기 기능
-            print("❤️ 찜하기 버튼 클릭")
+            toggleFavorite()
         default:
             break
         }

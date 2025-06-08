@@ -185,16 +185,18 @@ class ViewController: UIViewController {
     
     func loadFavorites() {
         print("❤️ 찜 목록 로딩...")
-        // TODO: 나중에 실제 찜 기능 구현
-        // 일단 빈 목록으로
+        
+        let favorites = FavoriteManager.shared.getFavorites()
+        let mediaItems = favorites.map { $0.toMediaItem() }
+        
         DispatchQueue.main.async {
-            self.mediaItems = []
+            self.allMediaItems = mediaItems
+            self.mediaItems = mediaItems
             self.movieTableView.reloadData()
-            print("✅ 찜 목록: 0개 (아직 구현 안됨)")
+            print("✅ 찜 목록: \(mediaItems.count)개")
         }
     }
 
-    
     // 에러 처리
     func showErrorAlert(error: TMDBError) {
         let message: String

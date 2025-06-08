@@ -325,6 +325,36 @@
                                             <outlet property="castCollectionView" destination="8qT-Q1-iF3" id="RQA-Et-zjj"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="FavoriteCell" id="GFY-cm-KCL" customClass="FavoriteButtonTableViewCell" customModule="WhatToWatchToday" customModuleProvider="target">
+                                        <rect key="frame" x="0.0" y="629.33333396911621" width="393" height="80.333335876464844"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="GFY-cm-KCL" id="A9r-Q4-bOK">
+                                            <rect key="frame" x="0.0" y="0.0" width="393" height="80.333335876464844"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nmS-Bu-1b5">
+                                                    <rect key="frame" x="32" y="16.000000000000004" width="329" height="48.333333333333343"/>
+                                                    <constraints>
+                                                        <constraint firstAttribute="height" constant="48" id="sXQ-9q-fl3"/>
+                                                    </constraints>
+                                                    <state key="normal" title="Button"/>
+                                                    <buttonConfiguration key="configuration" style="plain" title="🤍 찜하기"/>
+                                                    <connections>
+                                                        <action selector="favoriteButtonTapped:" destination="GFY-cm-KCL" eventType="touchUpInside" id="QrL-Jr-FLB"/>
+                                                    </connections>
+                                                </button>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="nmS-Bu-1b5" firstAttribute="leading" secondItem="A9r-Q4-bOK" secondAttribute="leading" constant="32" id="6UH-wG-tq5"/>
+                                                <constraint firstItem="nmS-Bu-1b5" firstAttribute="top" secondItem="A9r-Q4-bOK" secondAttribute="top" constant="16" id="A0N-Sj-9eM"/>
+                                                <constraint firstAttribute="trailing" secondItem="nmS-Bu-1b5" secondAttribute="trailing" constant="32" id="BPc-Fi-YSZ"/>
+                                                <constraint firstAttribute="bottom" secondItem="nmS-Bu-1b5" secondAttribute="bottom" constant="16" id="aKQ-Yf-7Ad"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="favoriteButton" destination="nmS-Bu-1b5" id="5dC-nZ-8qv"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </prototypes>
                             </tableView>
                         </subviews>
