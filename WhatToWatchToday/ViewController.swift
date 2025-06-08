@@ -117,6 +117,11 @@ class ViewController: UIViewController {
         currentCategory = category
         print("🔄 카테고리 변경: \(category.title)")
         
+        // 네비게이션 바 초기화
+        if category != .favorites {
+            setupFavoritesNavigationBar(count: 0)
+        }
+        
         // 카테고리별 데이터 로딩
         loadDataForCategory(category)
     }
@@ -193,8 +198,76 @@ class ViewController: UIViewController {
             self.allMediaItems = mediaItems
             self.mediaItems = mediaItems
             self.movieTableView.reloadData()
+            
+            // 찜목록일 때 네비게이션 바 설정
+            self.setupFavoritesNavigationBar(count: mediaItems.count)
+            
             print("✅ 찜 목록: \(mediaItems.count)개")
         }
+    }
+    
+    // 찜목록 전용 네비게이션 바 설정
+    func setupFavoritesNavigationBar(count: Int) {
+        if currentCategory == .favorites {
+            if count > 0 {
+                // 찜 목록이 있을 때 - 정렬/삭제 버튼 표시
+                let sortButton = UIBarButtonItem(
+                    image: UIImage(systemName: "arrow.up.arrow.down"),
+                    style: .plain,
+                    target: self,
+                    action: #selector(showSortOptions)
+                )
+                
+                let clearButton = UIBarButtonItem(
+                    image: UIImage(systemName: "trash"),
+                    style: .plain,
+                    target: self,
+                    action: #selector(showClearAlert)
+                )
+                
+                navigationItem.rightBarButtonItems = [clearButton, sortButton]
+                navigationItem.title = "❤️ 찜목록 (\(count)개)"
+            } else {
+                // 찜 목록이 비어있을 때
+                navigationItem.rightBarButtonItems = nil
+                navigationItem.title = "❤️ 찜목록 (비어있음)"
+            }
+        } else {
+            // 다른 탭일 때는 기본 상태
+            navigationItem.rightBarButtonItems = nil
+            navigationItem.title = "오늘은 뭐 보까?"
+        }
+    }
+
+    // 정렬 옵션 표시
+    @objc func showSortOptions() {
+        let alert = UIAlertController(title: "정렬 방식", message: "어떤 방식으로 정렬하시겠습니까?", preferredStyle: .actionSheet)
+        
+        alert.addAction(UIAlertAction(title: "최신순", style: .default) { _ in
+            self.sortFavorites(by: .newest)
+        })
+        
+        alert.addAction(UIAlertAction(title: "제목순", style: .default) { _ in
+            self.sortFavorites(by: .title)
+        })
+        
+        alert.addAction(UIAlertAction(title: "평점순", style: .default) { _ in
+            self.sortFavorites(by: .rating)
+        })
+        
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        
+        // iPad에서 crash 방지
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItems?.last
+        }
+        
+        present(alert, animated: true)
+    }
+
+    // 전체 삭제 확인
+    @objc func showClearAlert() {
+        clearAllFavorites()
     }
 
     // 에러 처리
@@ -427,4 +500,123 @@ extension UIImage {
             self.draw(in: CGRect(origin: .zero, size: size))
         }
     }
+}
+
+// UITableViewDelegate 확장 (스와이프 삭제)
+extension ViewController {
+    
+    // 스와이프 액션 설정 (iOS 11+)
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        
+        // 찜목록 탭일 때만 스와이프 삭제 활성화
+        guard currentCategory == .favorites else {
+            return nil
+        }
+        
+        // 찜 해제 액션 생성
+        let deleteAction = UIContextualAction(style: .destructive, title: "찜 해제") { [weak self] (action, view, completionHandler) in
+            self?.removeFavoriteItem(at: indexPath)
+            completionHandler(true)
+        }
+        
+        // 액션 스타일 설정
+        deleteAction.backgroundColor = .systemRed
+        deleteAction.image = UIImage(systemName: "heart.slash.fill")
+        
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+        configuration.performsFirstActionWithFullSwipe = true  // 전체 스와이프로 바로 삭제
+        
+        return configuration
+    }
+    
+    // 찜 아이템 제거 메서드
+    func removeFavoriteItem(at indexPath: IndexPath) {
+        guard currentCategory == .favorites,
+              indexPath.row < mediaItems.count else {
+            return
+        }
+        
+        let mediaItem = mediaItems[indexPath.row]
+        
+        // FavoriteManager에서 찜 해제
+        FavoriteManager.shared.removeFromFavorites(id: mediaItem.id, mediaType: mediaItem.mediaType)
+        
+        // 로컬 배열에서도 제거
+        mediaItems.remove(at: indexPath.row)
+        allMediaItems = mediaItems
+        
+        // 테이블뷰에서 애니메이션과 함께 행 삭제
+        movieTableView.deleteRows(at: [indexPath], with: .fade)
+        
+        // 피드백 제공
+        showRemoveToast(title: mediaItem.displayTitle)
+        
+        print("💔 찜 해제: \(mediaItem.displayTitle)")
+    }
+    
+    // 찜 해제 토스트 메시지
+    func showRemoveToast(title: String) {
+        let message = "'\(title)'이(가) 찜 목록에서 제거되었습니다 💔"
+        
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        present(alert, animated: true)
+        
+        // 2초 후 자동으로 사라지게
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            alert.dismiss(animated: true)
+        }
+    }
+}
+
+// 추가 편의 기능들
+extension ViewController {
+    
+    // 찜목록 전체 삭제 (옵션)
+    func clearAllFavorites() {
+        let alert = UIAlertController(
+            title: "찜 목록 전체 삭제",
+            message: "모든 찜 목록을 삭제하시겠습니까?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "삭제", style: .destructive) { _ in
+            FavoriteManager.shared.clearAllFavorites()
+            self.loadFavorites()  // 목록 새로고침
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    // 찜목록 정렬 (옵션)
+    func sortFavorites(by type: FavoriteSortType) {
+        guard currentCategory == .favorites else { return }
+        
+        let favorites = FavoriteManager.shared.getFavorites()
+        let sortedFavorites: [FavoriteItem]
+        
+        switch type {
+        case .newest:
+            sortedFavorites = favorites.sorted { $0.addedDate > $1.addedDate }
+        case .title:
+            sortedFavorites = favorites.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .rating:
+            sortedFavorites = favorites.sorted { $0.voteAverage > $1.voteAverage }
+        }
+        
+        let mediaItems = sortedFavorites.map { $0.toMediaItem() }
+        
+        DispatchQueue.main.async {
+            self.allMediaItems = mediaItems
+            self.mediaItems = mediaItems
+            self.movieTableView.reloadData()
+        }
+    }
+}
+
+// 정렬 타입 열거형
+enum FavoriteSortType {
+    case newest    // 최신순
+    case title     // 제목순
+    case rating    // 평점순
 }
