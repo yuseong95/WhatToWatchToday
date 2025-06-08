@@ -14,8 +14,8 @@ class ViewController: UIViewController {
     @IBOutlet weak var movieTableView: UITableView!
     @IBOutlet weak var searchBar: UISearchBar!  // 새로 추가된 Storyboard Search Bar
     
-    var movies: [Movie] = []  // 영화 데이터를 저장할 배열
-    var allMovies: [Movie] = []  // 전체 영화 목록 (검색용)
+    var mediaItems: [MediaItem] = []  // 미디어 데이터를 저장할 배열
+    var allMediaItems: [MediaItem] = []  // 전체 미디어 목록 (검색용)
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,7 +23,7 @@ class ViewController: UIViewController {
         setupUI()
         setupTableView()
         setupSearchBar()  // Search Bar 설정 추가
-        loadPopularMovies()
+        loadPopularMedia()
     }
     
     func setupUI() {
@@ -57,31 +57,53 @@ class ViewController: UIViewController {
     // Search Bar 설정
     func setupSearchBar() {
         searchBar.delegate = self
-        searchBar.placeholder = "영화 제목을 검색하세요"
+        searchBar.placeholder = "영화나 TV 프로그램을 검색하세요"
         searchBar.searchBarStyle = .minimal
         searchBar.showsCancelButton = false
     }
     
-    // 데이터 로딩
-    func loadPopularMovies() {
+    // 데이터 로딩 (기존 메서드 이름 변경)
+    func loadPopularMedia() {
         print("🎬 인기 영화 목록 로딩 시작...")
         
+        // 일단 영화만 먼저 (나중에 TV도 추가)
         TMDBService.shared.fetchPopularMovies { [weak self] result in
             switch result {
             case .success(let movieResponse):
                 print("✅ 영화 \(movieResponse.results.count)개 로딩 완료!")
                 
-                // 메인 스레드에서 UI 업데이트
+                // Movie를 MediaItem으로 변환
+                let mediaItems = movieResponse.results.map { movie in
+                    self?.convertMovieToMediaItem(movie) ?? MediaItem(
+                        id: movie.id,
+                        mediaType: "movie",
+                        title: movie.title,
+                        name: nil,
+                        overview: movie.overview,
+                        releaseDate: movie.releaseDate,
+                        firstAirDate: nil,
+                        posterPath: movie.posterPath,
+                        backdropPath: movie.backdropPath,
+                        voteAverage: movie.voteAverage,
+                        voteCount: movie.voteCount,
+                        popularity: movie.popularity,
+                        genreIds: movie.genreIds,
+                        adult: movie.adult,
+                        originalLanguage: movie.originalLanguage,
+                        originalTitle: movie.originalTitle,
+                        originalName: nil
+                    )
+                }
+                
                 DispatchQueue.main.async {
-                    self?.allMovies = movieResponse.results  // 전체 목록 저장
-                    self?.movies = movieResponse.results     // 표시용 목록
+                    self?.allMediaItems = mediaItems
+                    self?.mediaItems = mediaItems
                     self?.movieTableView.reloadData()
                 }
                 
             case .failure(let error):
                 print("❌ 영화 로딩 실패: \(error)")
                 
-                // 에러 알림 표시
                 DispatchQueue.main.async {
                     self?.showErrorAlert(error: error)
                 }
@@ -89,23 +111,25 @@ class ViewController: UIViewController {
         }
     }
     
-    // 검색 기능
-    func searchMovies(query: String) {
+
+    
+    // 검색 기능 (MultiSearch 사용)
+    func searchMedia(query: String) {
         if query.isEmpty {
             // 검색어가 비어있으면 전체 목록 표시
-            movies = allMovies
+            mediaItems = allMediaItems
             movieTableView.reloadData()
             return
         }
         
-        print("🔍 영화 검색: \(query)")
+        print("🔍 통합 검색: \(query)")
         
-        TMDBService.shared.searchMovies(query: query) { [weak self] result in
+        TMDBService.shared.searchMulti(query: query) { [weak self] result in
             switch result {
-            case .success(let movieResponse):
-                print("✅ 검색 결과: \(movieResponse.results.count)개")
+            case .success(let multiSearchResponse):
+                print("✅ 검색 결과: \(multiSearchResponse.results.count)개")
                 DispatchQueue.main.async {
-                    self?.movies = movieResponse.results
+                    self?.mediaItems = multiSearchResponse.results
                     self?.movieTableView.reloadData()
                 }
             case .failure(let error):
@@ -139,7 +163,7 @@ class ViewController: UIViewController {
         )
         
         alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { _ in
-            self.loadPopularMovies()
+            self.loadPopularMedia()
         })
         
         alert.addAction(UIAlertAction(title: "확인", style: .cancel))
@@ -153,9 +177,13 @@ class ViewController: UIViewController {
            let destinationVC = segue.destination as? TableMovieDetailViewController,
            let indexPath = movieTableView.indexPathForSelectedRow {
             
-            let selectedMovie = movies[indexPath.row]
-            destinationVC.movie = selectedMovie
-            print("📤 영화 데이터 전달: \(selectedMovie.title)")
+            let selectedMediaItem = mediaItems[indexPath.row]
+            
+            // MediaItem을 Movie로 변환해서 전달
+            let movie = convertMediaItemToMovie(selectedMediaItem)
+            destinationVC.movie = movie
+            destinationVC.mediaType = selectedMediaItem.mediaType
+            print("📤 미디어 데이터 전달: \(selectedMediaItem.displayTitle), 타입: \(selectedMediaItem.mediaType)")
         }
     }
     
@@ -184,6 +212,48 @@ class ViewController: UIViewController {
             }
         }
     }
+    
+    // Movie를 MediaItem으로 변환하는 헬퍼 메서드
+    func convertMovieToMediaItem(_ movie: Movie) -> MediaItem {
+        return MediaItem(
+            id: movie.id,
+            mediaType: "movie",
+            title: movie.title,
+            name: nil,
+            overview: movie.overview,
+            releaseDate: movie.releaseDate,
+            firstAirDate: nil,
+            posterPath: movie.posterPath,
+            backdropPath: movie.backdropPath,
+            voteAverage: movie.voteAverage,
+            voteCount: movie.voteCount,
+            popularity: movie.popularity,
+            genreIds: movie.genreIds,
+            adult: movie.adult,
+            originalLanguage: movie.originalLanguage,
+            originalTitle: movie.originalTitle,
+            originalName: nil
+        )
+    }
+    
+    // MediaItem을 Movie로 변환하는 헬퍼 메서드 (상세화면 호환성을 위해)
+    func convertMediaItemToMovie(_ mediaItem: MediaItem) -> Movie {
+        return Movie(
+            id: mediaItem.id,
+            title: mediaItem.displayTitle,
+            overview: mediaItem.displayOverview,
+            releaseDate: mediaItem.displayDate,
+            posterPath: mediaItem.posterPath,
+            backdropPath: mediaItem.backdropPath,
+            voteAverage: mediaItem.voteAverage ?? 0.0,
+            voteCount: mediaItem.voteCount ?? 0,
+            popularity: mediaItem.popularity ?? 0.0,
+            genreIds: mediaItem.genreIds ?? [],
+            adult: mediaItem.adult ?? false,
+            originalLanguage: mediaItem.originalLanguage ?? "en",
+            originalTitle: mediaItem.originalTitle ?? mediaItem.displayTitle
+        )
+    }
 }
 
 // UITableViewDataSource
@@ -191,17 +261,17 @@ extension ViewController: UITableViewDataSource {
     
     // 행의 개수
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return movies.count
+        return mediaItems.count
     }
     
     // 각 행에 표시할 셀 (포스터 오류 수정됨)
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "MovieCell", for: indexPath)
-        let movie = movies[indexPath.row]
+        let mediaItem = mediaItems[indexPath.row]
         
         // 셀 내용 설정
-        cell.textLabel?.text = movie.title
-        cell.detailTextLabel?.text = "\(movie.releaseYear) ⭐ \(movie.formattedRating)"
+        cell.textLabel?.text = mediaItem.displayTitle
+        cell.detailTextLabel?.text = "\(mediaItem.displayYear) ⭐ \(mediaItem.formattedRating) (\(mediaItem.mediaTypeKorean))"
         
         // 셀 스타일 설정
         cell.textLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
@@ -227,12 +297,12 @@ extension ViewController: UITableViewDataSource {
             imageView.layer.cornerRadius = 8
             
             // ✅ 이전 다운로드 작업 취소 (중요!)
-            if let urlString = movie.fullPosterURL {
+            if let urlString = mediaItem.fullPosterURL {
                 ImageCache.shared.cancelDownload(for: urlString)
             }
             
             // 실제 포스터 이미지 로딩
-            ImageCache.shared.loadImage(from: movie.fullPosterURL) { [weak imageView] loadedImage in
+            ImageCache.shared.loadImage(from: mediaItem.fullPosterURL) { [weak imageView] loadedImage in
                 // ✅ imageView가 아직 유효한지 확인 (셀 재사용 대응)
                 guard let imageView = imageView else { return }
                 
@@ -255,10 +325,10 @@ extension ViewController: UITableViewDelegate {
     
     // 행을 선택했을 때
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)  // 선택 효과 제거
+        tableView.deselectRow(at: indexPath, animated: true)
         
-        let selectedMovie = movies[indexPath.row]
-        print("🎯 선택된 영화: \(selectedMovie.title)")
+        let selectedMediaItem = mediaItems[indexPath.row]
+        print("🎯 선택된 미디어: \(selectedMediaItem.displayTitle)")
     }
 }
 
@@ -268,7 +338,7 @@ extension ViewController: UISearchBarDelegate {
     // 검색 버튼을 눌렀을 때
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         guard let searchText = searchBar.text else { return }
-        searchMovies(query: searchText)
+        searchMedia(query: searchText)
         searchBar.resignFirstResponder()  // 키보드 숨기기
     }
     
@@ -276,11 +346,11 @@ extension ViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchText.isEmpty {
             // 검색어가 비어있으면 전체 목록 표시
-            movies = allMovies
+            mediaItems = allMediaItems
             movieTableView.reloadData()
         } else if searchText.count >= 2 {
             // 2글자 이상일 때 검색 (API 호출 줄이기)
-            searchMovies(query: searchText)
+            searchMedia(query: searchText)
         }
     }
     
@@ -288,7 +358,7 @@ extension ViewController: UISearchBarDelegate {
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         searchBar.text = ""
         searchBar.resignFirstResponder()
-        movies = allMovies  // 전체 목록으로 복원
+        mediaItems = allMediaItems  // 전체 목록으로 복원
         movieTableView.reloadData()
     }
 }

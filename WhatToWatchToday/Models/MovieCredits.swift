@@ -22,12 +22,12 @@ struct CastMember: Codable {
     let profilePath: String?       // 프로필 사진 경로
     let order: Int                 // 출연진 순서 (주연/조연 구분)
     let creditId: String
-    let adult: Bool
+    let adult: Bool?
     let gender: Int?               // 1: 여성, 2: 남성
-    let knownForDepartment: String // "Acting"
-    let originalName: String
-    let popularity: Double
-    let castId: Int
+    let knownForDepartment: String? // "Acting"
+    let originalName: String?
+    let popularity: Double?
+    let castId: Int?
     
     enum CodingKeys: String, CodingKey {
         case id, name, character, order, adult, gender, popularity
@@ -47,11 +47,11 @@ struct CrewMember: Codable {
     let department: String         // 부서 (Directing, Production, etc.)
     let profilePath: String?       // 프로필 사진 경로
     let creditId: String
-    let adult: Bool
+    let adult: Bool?
     let gender: Int?
-    let knownForDepartment: String
-    let originalName: String
-    let popularity: Double
+    let knownForDepartment: String?
+    let originalName: String?
+    let popularity: Double?
     
     enum CodingKeys: String, CodingKey {
         case id, name, job, department, adult, gender, popularity

@@ -101,10 +101,10 @@ extension MovieDetailWithCredits {
         return genres.map { $0.name }.joined(separator: ", ")
     }
     
-    // 주요 배우들 (상위 6명)
+    // 주요 배우들 (상위 10명)
     var mainCast: [CastMember] {
         guard let credits = credits else { return [] }
-        return Array(credits.cast.prefix(6))
+        return Array(credits.cast.prefix(10))
     }
     
     // 감독 정보

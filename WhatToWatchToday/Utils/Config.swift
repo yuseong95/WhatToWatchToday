@@ -24,4 +24,5 @@ extension Config {
     static let popularMoviesURL = "\(baseURL)/movie/popular"
     static let searchMoviesURL = "\(baseURL)/search/movie"
     static let movieDetailURL = "\(baseURL)/movie"
+    static let multiSearchURL = "\(baseURL)/search/multi"
 }

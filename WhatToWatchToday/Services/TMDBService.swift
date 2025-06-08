@@ -58,6 +58,51 @@ class TMDBService {
         performRequest(url: url, completion: completion)
     }
     
+    // 통합 검색 (영화 + TV)
+    func searchMulti(query: String, page: Int = 1, completion: @escaping (Result<MultiSearchResponse, TMDBError>) -> Void) {
+        
+        // 검색어가 비어있으면 에러
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        // 1. URL 만들기
+        guard let url = createURL(for: .multiSearch, page: page, query: query) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("🔍 MultiSearch URL: \(url)")
+        
+        // 2. API 요청 보내기
+        session.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                // 에러 체크
+                if let error = error {
+                    completion(.failure(.networkError(error)))
+                    return
+                }
+                
+                // 데이터 체크
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+                
+                // JSON 변환
+                do {
+                    let multiSearchResponse = try JSONDecoder().decode(MultiSearchResponse.self, from: data)
+                    print("✅ MultiSearch 결과: \(multiSearchResponse.results.count)개")
+                    completion(.success(multiSearchResponse))
+                } catch {
+                    print("❌ MultiSearch 디코딩 에러: \(error)")
+                    completion(.failure(.decodingFailed))
+                }
+            }
+        }.resume()
+    }
+    
     // 영화 상세 정보 가져오기 (기본 Movie 타입)
     func fetchMovieDetails(movieId: Int, completion: @escaping (Result<Movie, TMDBError>) -> Void) {
         
@@ -213,6 +258,82 @@ class TMDBService {
         }.resume()
     }
     
+    // TV 프로그램 상세 정보 + 배우 정보 한 번에 가져오기
+    func fetchTVDetailWithCredits(tvId: Int, completion: @escaping (Result<TVDetail, TMDBError>) -> Void) {
+        
+        // 1. URL 만들기 (credits 정보 포함)
+        guard let url = createURLWithCredits(for: .tvDetails(id: tvId)) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("📺 TV 상세정보 + 배우정보 요청 URL: \(url)")
+        
+        // 2. API 요청 보내기
+        session.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                // 에러 체크
+                if let error = error {
+                    completion(.failure(.networkError(error)))
+                    return
+                }
+                
+                // 데이터 체크
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+                
+                // JSON 변환
+                do {
+                    let tvDetail = try JSONDecoder().decode(TVDetail.self, from: data)
+                    print("✅ TV 통합 정보 로딩 완료:")
+                    print("   제목: \(tvDetail.name)")
+                    print("   시즌 수: \(tvDetail.numberOfSeasons ?? 0)")
+                    print("   에피소드 수: \(tvDetail.numberOfEpisodes ?? 0)")
+                    print("   주요 배우: \(tvDetail.credits?.cast.count ?? 0)명")
+                    
+                    completion(.success(tvDetail))
+                } catch {
+                    print("❌ TVDetail 디코딩 에러: \(error)")
+                    completion(.failure(.decodingFailed))
+                }
+            }
+        }.resume()
+    }
+
+    // 인기 TV 프로그램 목록 가져오기
+    func fetchPopularTV(page: Int = 1, completion: @escaping (Result<MultiSearchResponse, TMDBError>) -> Void) {
+        
+        // 1. URL 만들기
+        guard let url = createURL(for: .popularTV, page: page) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("📺 인기 TV 프로그램 로딩: \(url)")
+        
+        // 2. API 요청 보내기 (일단 기본 구현)
+        session.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    completion(.failure(.networkError(error)))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(.noData))
+                    return
+                }
+                
+                // TODO: TV 응답을 MultiSearchResponse 형태로 변환 필요
+                // 일단 간단하게 빈 응답 반환
+                let emptyResponse = MultiSearchResponse(page: 1, results: [], totalPages: 1, totalResults: 0)
+                completion(.success(emptyResponse))
+            }
+        }.resume()
+    }
+    
     private func createURLWithCredits(for endpoint: APIEndpoint, page: Int = 1, query: String? = nil) -> URL? {
         var components = URLComponents()
         components.scheme = "https"
@@ -228,6 +349,14 @@ class TMDBService {
             components.path = "/3/movie/\(id)"
         case .movieCredits(let id):
             components.path = "/3/movie/\(id)/credits"
+        case .multiSearch:
+            components.path = "/3/search/multi"
+        case .popularTV:
+            components.path = "/3/tv/popular"
+        case .tvDetails(let id):
+            components.path = "/3/tv/\(id)"
+        case .tvCredits(let id):
+            components.path = "/3/tv/\(id)/credits"
         }
         
         // 쿼리 파라미터 추가
@@ -239,6 +368,10 @@ class TMDBService {
         
         // 🎭 영화 상세정보일 때 credits 정보도 함께 요청
         if case .movieDetails = endpoint {
+            queryItems.append(URLQueryItem(name: "append_to_response", value: "credits"))
+        }
+        
+        if case .tvDetails = endpoint {
             queryItems.append(URLQueryItem(name: "append_to_response", value: "credits"))
         }
         
@@ -261,6 +394,10 @@ private extension TMDBService {
         case searchMovies
         case movieDetails(id: Int)
         case movieCredits(id: Int)
+        case multiSearch
+        case popularTV
+        case tvDetails(id: Int)
+        case tvCredits(id: Int)
     }
     
     // URL 생성하기
@@ -279,6 +416,14 @@ private extension TMDBService {
             components.path = "/3/movie/\(id)"
         case .movieCredits(let id):
             components.path = "/3/movie/\(id)/credits"
+        case .multiSearch:
+            components.path = "/3/search/multi"
+        case .popularTV:
+            components.path = "/3/tv/popular"
+        case .tvDetails(let id):
+            components.path = "/3/tv/\(id)"
+        case .tvCredits(let id):
+            components.path = "/3/tv/\(id)/credits"
         }
         
         // 쿼리 파라미터 추가

@@ -23,12 +23,13 @@ class BasicInfoTableViewCell: UITableViewCell {
         releaseDateLabel.font = UIFont.systemFont(ofSize: 16)
         releaseDateLabel.textColor = .label
         releaseDateLabel.numberOfLines = 1
+        releaseDateLabel.textAlignment = .center
         
         // 평점 라벨 설정
         ratingLabel.font = UIFont.systemFont(ofSize: 16)
         ratingLabel.textColor = .label
         ratingLabel.numberOfLines = 1
-        ratingLabel.textAlignment = .right  // 오른쪽 정렬
+        ratingLabel.textAlignment = .center
         
         // 셀 선택 스타일 제거
         selectionStyle = .none

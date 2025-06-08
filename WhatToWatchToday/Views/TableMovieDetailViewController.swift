@@ -14,6 +14,8 @@ class TableMovieDetailViewController: UIViewController {
     
     var movie: Movie?  // 이전 화면에서 전달받을 영화 정보
     var movieDetailWithCredits: MovieDetailWithCredits?
+    var tvDetail: TVDetail?
+    var mediaType: String = "movie"
     var isOverviewExpanded = false
     var fullOverviewText = ""
     
@@ -43,8 +45,11 @@ class TableMovieDetailViewController: UIViewController {
         
         setupUI()
         setupTableView()
+        
+        tableView.estimatedRowHeight = 120
+        
         displayMovieInfo()
-        loadMovieDetail()
+        loadMediaDetail()
     }
     
     func setupUI() {
@@ -82,23 +87,43 @@ class TableMovieDetailViewController: UIViewController {
         print("🎬 기본 영화 정보 표시: \(movie.title)")
     }
     
-    func loadMovieDetail() {
+    // 미디어 상세 정보 로딩 (영화 또는 TV 구분)
+    func loadMediaDetail() {
         guard let movie = movie else { return }
         
-        print("🔍 영화 상세 정보 + 배우 정보 로딩 시작: \(movie.title)")
+        print("🔍 미디어 상세 정보 로딩 시작: \(movie.title), 타입: \(mediaType)")
         
-        TMDBService.shared.fetchMovieDetailWithCredits(movieId: movie.id) { [weak self] result in
-            switch result {
-            case .success(let movieDetailWithCredits):
-                print("✅ 통합 정보 로딩 완료")
-                self?.movieDetailWithCredits = movieDetailWithCredits
-                
-                DispatchQueue.main.async {
-                    self?.tableView.reloadData()
+        if mediaType == "tv" {
+            // TV 프로그램 상세 정보 로딩
+            TMDBService.shared.fetchTVDetailWithCredits(tvId: movie.id) { [weak self] result in
+                switch result {
+                case .success(let tvDetail):
+                    print("✅ TV 통합 정보 로딩 완료")
+                    self?.tvDetail = tvDetail
+                    
+                    DispatchQueue.main.async {
+                        self?.tableView.reloadData()
+                    }
+                    
+                case .failure(let error):
+                    print("❌ TV 통합 정보 로딩 실패: \(error)")
                 }
-                
-            case .failure(let error):
-                print("❌ 통합 정보 로딩 실패: \(error)")
+            }
+        } else {
+            // 영화 상세 정보 로딩 (기존 코드)
+            TMDBService.shared.fetchMovieDetailWithCredits(movieId: movie.id) { [weak self] result in
+                switch result {
+                case .success(let movieDetailWithCredits):
+                    print("✅ 영화 통합 정보 로딩 완료")
+                    self?.movieDetailWithCredits = movieDetailWithCredits
+                    
+                    DispatchQueue.main.async {
+                        self?.tableView.reloadData()
+                    }
+                    
+                case .failure(let error):
+                    print("❌ 영화 통합 정보 로딩 실패: \(error)")
+                }
             }
         }
     }
@@ -125,7 +150,7 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
         case .poster:
             return 400  // 포스터 섹션은 무조건 400pt 높이
         case .overview:
-            return isOverviewExpanded ? 200 : 120  // 줄거리는 펼침/접힘에 따라
+            return UITableView.automaticDimension  // 줄거리는 펼침/접힘에 따라
         case .cast:
             return 180  // 배우 정보는 180pt
         default:
@@ -167,20 +192,47 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
                 }
                 return cell
             case .detailInfo:
-                if let detail = movieDetailWithCredits {
-                    cell.textLabel?.text = "상영시간: \(detail.formattedRuntime) | 장르: \(detail.genreString)"
-                } else {
-                    cell.textLabel?.text = "상세 정보 로딩 중..."
+                // ✅ Custom Cell 사용으로 변경
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "DetailInfoCell", for: indexPath) as? DetailInfoTableViewCell else {
+                    return UITableViewCell()
                 }
+                
+                // ✅ 영화와 TV 구분해서 처리
+                if mediaType == "tv", let tvDetail = tvDetail {
+                    cell.configureForTV(with: tvDetail)  // TV용 configure 메서드 (나중에 추가)
+                } else if let detail = movieDetailWithCredits {
+                    cell.configure(with: detail)  // 기존 영화용
+                }
+                return cell
             case .overview:
-                cell.textLabel?.text = isOverviewExpanded ? fullOverviewText : String(fullOverviewText.prefix(100)) + "..."
-                cell.textLabel?.numberOfLines = isOverviewExpanded ? 0 : 3
-            case .cast:
-                if let detail = movieDetailWithCredits {
-                    cell.textLabel?.text = "주요 배우 \(detail.mainCast.count)명"
-                } else {
-                    cell.textLabel?.text = "배우 정보 로딩 중..."
+                // ✅ Custom Cell 사용으로 변경
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "OverviewCell", for: indexPath) as? OverviewTableViewCell else {
+                    return UITableViewCell()
                 }
+                
+                cell.configure(
+                    with: fullOverviewText,
+                    isExpanded: isOverviewExpanded,
+                    toggleAction: { [weak self] in
+                        self?.isOverviewExpanded.toggle()
+                        self?.tableView.reloadRows(at: [indexPath], with: .automatic)
+                    }
+                )
+                return cell
+            case .cast:
+                // ✅ Custom Cell 사용으로 변경
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: "CastCell", for: indexPath) as? CastTableViewCell else {
+                    return UITableViewCell()
+                }
+                
+                // ✅ 영화와 TV 구분해서 처리
+                if mediaType == "tv", let tvDetail = tvDetail {
+                    let mainCast = Array((tvDetail.credits?.cast ?? []).prefix(10))  // TV용 주요 배우
+                    cell.configure(with: mainCast)
+                } else if let detail = movieDetailWithCredits {
+                    cell.configure(with: detail.mainCast)  // 기존 영화용
+                }
+                return cell
             case .favorite:
                 cell.textLabel?.text = "❤️ 찜하기"
                 cell.textLabel?.textAlignment = .center
@@ -194,8 +246,7 @@ extension TableMovieDetailViewController: UITableViewDataSource, UITableViewDele
     }
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        guard let sectionType = Section(rawValue: section) else { return nil }
-        return sectionType.title.isEmpty ? nil : sectionType.title
+        return nil
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
