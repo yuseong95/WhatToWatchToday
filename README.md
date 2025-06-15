@@ -40,8 +40,7 @@
   * 플로팅 버튼을 통한 쉬운 접근성
 
 ### 2.2 프로젝트 구조
-
-![image](https://github.com/user-attachments/assets/85cc6b52-7b7e-4582-9406-c71e6768d22e)
+<img width="560" alt="struct" src="https://github.com/user-attachments/assets/4395256d-a51e-467f-8c9b-0183b277c70a" />
 
 
 ### 2.3 결과물
@@ -77,7 +76,8 @@
 - 카테고리별 추천
 - 전체 간식 목록 보기
 - 다시 뽑기 기능
-![image](https://github.com/user-attachments/assets/4f462560-8394-44f2-9428-e7394ca166fd)
+<img width="298" alt="snack" src="https://github.com/user-attachments/assets/117776ac-cc4b-4864-8e5e-0dfaf4bc980e" />
+
 
 
 
