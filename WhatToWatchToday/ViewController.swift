@@ -20,6 +20,12 @@ class ViewController: UIViewController {
     var mediaItems: [MediaItem] = []
     var allMediaItems: [MediaItem] = []
     
+    private var currentPage = 1
+    private var isLoading = false
+    private var hasMorePages = true
+    private var totalPages = 1
+    private var loadingFooterView: UIView?
+    
     enum MediaCategory: Int, CaseIterable {
         case movie = 0
         case tv = 1
@@ -45,6 +51,7 @@ class ViewController: UIViewController {
         setupTableView()
         setupSearchBar()
         setupSnackButton()
+        setupLoadingFooter()
         loadDataForCategory(currentCategory)
     }
     
@@ -83,6 +90,36 @@ class ViewController: UIViewController {
         searchBar.placeholder = "영화나 TV 프로그램을 검색하세요"
         searchBar.searchBarStyle = .minimal
         searchBar.showsCancelButton = false
+    }
+    
+    // 로딩 푸터 설정
+    func setupLoadingFooter() {
+        loadingFooterView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 100))
+        
+        let activityIndicator = UIActivityIndicatorView(style: .medium)
+        activityIndicator.center = CGPoint(x: loadingFooterView!.frame.width / 2, y: 50)
+        activityIndicator.startAnimating()
+        
+        let loadingLabel = UILabel()
+        loadingLabel.text = "더 많은 콘텐츠 로딩 중..."
+        loadingLabel.textAlignment = .center
+        loadingLabel.font = UIFont.systemFont(ofSize: 14)
+        loadingLabel.textColor = .systemGray
+        loadingLabel.frame = CGRect(x: 0, y: 60, width: loadingFooterView!.frame.width, height: 20)
+        
+        loadingFooterView?.addSubview(activityIndicator)
+        loadingFooterView?.addSubview(loadingLabel)
+    }
+    
+    // 페이지네이션 초기화
+    private func resetPagination() {
+        currentPage = 1
+        isLoading = false
+        hasMorePages = true
+        totalPages = 1
+        mediaItems.removeAll()
+        allMediaItems.removeAll()
+        movieTableView.tableFooterView = nil
     }
     
     // Floating 간식 버튼 설정
@@ -124,28 +161,48 @@ class ViewController: UIViewController {
     }
     
     // 검색 기능 (MultiSearch 사용)
-    func searchMedia(query: String) {
+    func searchMedia(query: String, page: Int = 1, isLoadMore: Bool = false) {
         if query.isEmpty {
-            // 검색어가 비어있으면 전체 목록 표시
             mediaItems = allMediaItems
             movieTableView.reloadData()
             return
         }
         
-        print("🔍 통합 검색: \(query)")
+        guard !isLoading else { return }
+        isLoading = true
         
-        TMDBService.shared.searchMulti(query: query) { [weak self] result in
-            switch result {
-            case .success(let multiSearchResponse):
-                print("✅ 검색 결과: \(multiSearchResponse.results.count)개")
-                DispatchQueue.main.async {
-                    self?.mediaItems = multiSearchResponse.results
-                    self?.movieTableView.reloadData()
-                }
-            case .failure(let error):
-                print("❌ 검색 실패: \(error)")
-                DispatchQueue.main.async {
-                    self?.showErrorAlert(error: error)
+        if isLoadMore {
+            movieTableView.tableFooterView = loadingFooterView
+        }
+        
+        print("🔍 통합 검색: \(query) (페이지 \(page))")  // 페이지 정보 추가
+        
+        TMDBService.shared.searchMulti(query: query, page: page) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.movieTableView.tableFooterView = nil
+                
+                switch result {
+                case .success(let multiSearchResponse):
+                    print("✅ 검색 결과: \(multiSearchResponse.results.count)개")
+                    
+                    // 페이지 정보 업데이트
+                    self.totalPages = multiSearchResponse.totalPages
+                    self.hasMorePages = page < multiSearchResponse.totalPages
+                    
+                    // 데이터 처리 로직
+                    if isLoadMore {
+                        self.mediaItems.append(contentsOf: multiSearchResponse.results)
+                    } else {
+                        self.mediaItems = multiSearchResponse.results
+                    }
+                    
+                    self.movieTableView.reloadData()
+                case .failure(let error):
+                    print("❌ 검색 실패: \(error)")
+                    self.showErrorAlert(error: error)
                 }
             }
         }
@@ -155,6 +212,9 @@ class ViewController: UIViewController {
         guard let category = MediaCategory(rawValue: sender.selectedSegmentIndex) else { return }
         
         currentCategory = category
+        
+        resetPagination()
+        
         print("🔄 카테고리 변경: \(category.title)")
         
         // 네비게이션 바 초기화
@@ -219,13 +279,6 @@ class ViewController: UIViewController {
         // 취소
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         
-        // iPad 대응
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = snackButton
-            popover.sourceRect = snackButton.bounds
-            popover.permittedArrowDirections = [.up, .left]
-        }
-        
         present(alert, animated: true)
     }
 
@@ -258,9 +311,9 @@ class ViewController: UIViewController {
     func loadDataForCategory(_ category: MediaCategory) {
         switch category {
         case .movie:
-            loadPopularMovies()
+            loadPopularMovies(page: currentPage, isLoadMore: false)
         case .tv:
-            loadPopularTV()
+            loadPopularTV(page: currentPage, isLoadMore: false)
         case .favorites:
             loadFavorites()
         case .recommendation:
@@ -268,52 +321,110 @@ class ViewController: UIViewController {
         }
     }
     
-    func loadPopularMovies() {
-        print("🎬 인기 영화 로딩...")
+    func loadPopularMovies(page: Int = 1, isLoadMore: Bool = false) {
+        // 로딩 가드
+        guard !isLoading && hasMorePages else { return }
         
-        TMDBService.shared.fetchPopularMovies { [weak self] result in
-            switch result {
-            case .success(let movieResponse):
-                print("✅ 영화 \(movieResponse.results.count)개 로딩 완료!")
+        isLoading = true
+        
+        // 로딩 인디케이터
+        if isLoadMore {
+            movieTableView.tableFooterView = loadingFooterView
+        }
+        
+        print("🎬 인기 영화 로딩... 페이지: \(page)")
+        
+        TMDBService.shared.fetchPopularMovies(page: page) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.movieTableView.tableFooterView = nil
                 
-                let mediaItems = movieResponse.results.map { movie in
-                    self?.convertMovieToMediaItem(movie) ?? MediaItem(
-                        id: movie.id, mediaType: "movie", title: movie.title, name: nil,
-                        overview: movie.overview, releaseDate: movie.releaseDate, firstAirDate: nil,
-                        posterPath: movie.posterPath, backdropPath: movie.backdropPath,
-                        voteAverage: movie.voteAverage, voteCount: movie.voteCount,
-                        popularity: movie.popularity, genreIds: movie.genreIds, adult: movie.adult,
-                        originalLanguage: movie.originalLanguage, originalTitle: movie.originalTitle, originalName: nil
-                    )
-                }
-                
-                DispatchQueue.main.async {
-                    self?.allMediaItems = mediaItems
-                    self?.mediaItems = mediaItems
-                    self?.movieTableView.reloadData()
-                }
-                
-            case .failure(let error):
-                print("❌ 영화 로딩 실패: \(error)")
-                DispatchQueue.main.async {
-                    self?.showErrorAlert(error: error)
+                switch result {
+                case .success(let movieResponse):
+                    print("✅ 영화 \(movieResponse.results.count)개 로딩 완료! (페이지 \(page)/\(movieResponse.totalPages))")
+                    
+                    // 페이지 정보 업데이트
+                    self.totalPages = movieResponse.totalPages
+                    self.hasMorePages = page < movieResponse.totalPages
+                    
+                    let newMediaItems = movieResponse.results.map { movie in
+                        self.convertMovieToMediaItem(movie)
+                    }
+                    
+                    // 데이터 처리 로직
+                    if isLoadMore {
+                        self.allMediaItems.append(contentsOf: newMediaItems)
+                        self.mediaItems.append(contentsOf: newMediaItems)
+                    } else {
+                        self.allMediaItems = newMediaItems
+                        self.mediaItems = newMediaItems
+                    }
+                    
+                    self.movieTableView.reloadData()
+                    
+                case .failure(let error):
+                    print("❌ 영화 로딩 실패: \(error)")
+                    self.showErrorAlert(error: error)
                 }
             }
         }
     }
     
-    func loadPopularTV() {
-        print("📺 인기 TV 프로그램 로딩...")
-        TMDBService.shared.fetchPopularTV { [weak self] result in
-            switch result {
-            case .success(let response):
-                DispatchQueue.main.async {
-                    self?.mediaItems = response.results
-                    self?.movieTableView.reloadData()
+    func loadPopularTV(page: Int = 1, isLoadMore: Bool = false) {
+        guard !isLoading && hasMorePages else { return }
+        
+        isLoading = true
+        
+        if isLoadMore {
+            movieTableView.tableFooterView = loadingFooterView
+        }
+        
+        print("📺 인기 TV 프로그램 로딩... 페이지: \(page)")
+        TMDBService.shared.fetchPopularTV(page: page) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.movieTableView.tableFooterView = nil
+                
+                switch result {
+                case .success(let response):
+                    print("✅ TV 프로그램 \(response.results.count)개 로딩 완료!")
+                    
+                    // 페이지 정보 업데이트
+                    self.totalPages = response.totalPages
+                    self.hasMorePages = page < response.totalPages
+                    
+                    // 데이터 처리 로직
+                    if isLoadMore {
+                        self.mediaItems.append(contentsOf: response.results)
+                    } else {
+                        self.mediaItems = response.results
+                    }
+                    
+                    self.movieTableView.reloadData()
+                case .failure(let error):
+                    print("❌ TV 로딩 실패: \(error)")
+                    self.showErrorAlert(error: error)  // ✅ 추가
                 }
-            case .failure(let error):
-                print("❌ TV 로딩 실패: \(error)")
             }
+        }
+    }
+    
+    private func loadNextPage() {
+        guard !isLoading && hasMorePages else { return }
+        
+        currentPage += 1
+        
+        switch currentCategory {
+        case .movie:
+            loadPopularMovies(page: currentPage, isLoadMore: true)
+        case .tv:
+            loadPopularTV(page: currentPage, isLoadMore: true)
+        case .favorites, .recommendation:
+            break
         }
     }
     
@@ -712,6 +823,16 @@ extension ViewController: UITableViewDelegate {
         
         let selectedMediaItem = mediaItems[indexPath.row]
         print("🎯 선택된 미디어: \(selectedMediaItem.displayTitle)")
+    }
+    
+    // 무한 스크롤 구현
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        // 마지막에서 5번째 셀이 보일 때 다음 페이지 로드
+        let triggerRow = mediaItems.count - 5
+        
+        if indexPath.row >= triggerRow && indexPath.row >= 0 {
+            loadNextPage()
+        }
     }
 }
 
