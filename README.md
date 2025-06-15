@@ -155,3 +155,4 @@ class RecommendationManager {
 ## 3. 시연 및 발표 연상
 [![오늘은 뭐 보까? - 시연 영상](https://img.youtube.com/vi/hlOYoiA3COM/maxresdefault.jpg)](https://youtu.be/hlOYoiA3COM)
 
+화면 클릭시 유튜브 영상으로 이동합니다.
