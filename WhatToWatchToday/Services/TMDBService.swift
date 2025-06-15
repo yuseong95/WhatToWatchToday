@@ -248,3 +248,114 @@ private extension TMDBService {
         }.resume()
     }
 }
+
+extension TMDBService {
+    
+    /// 장르별 영화 검색 (맞춤 추천용)
+    func fetchMoviesByGenre(genreId: Int, page: Int = 1, completion: @escaping (Result<MovieResponse, TMDBError>) -> Void) {
+        guard let url = createGenreDiscoverURL(genreId: genreId, page: page) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("🎯 장르별 영화 검색: 장르ID \(genreId), URL: \(url)")
+        performRequest(url: url, responseType: MovieResponse.self, completion: completion)
+    }
+    
+    /// 여러 장르 조합 검색 (고급 추천용)
+    func fetchMoviesByGenres(genreIds: [Int], page: Int = 1, completion: @escaping (Result<MovieResponse, TMDBError>) -> Void) {
+        guard !genreIds.isEmpty else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        guard let url = createMultiGenreDiscoverURL(genreIds: genreIds, page: page) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("🎯 복합 장르 영화 검색: 장르IDs \(genreIds), URL: \(url)")
+        performRequest(url: url, responseType: MovieResponse.self, completion: completion)
+    }
+    
+    /// 고품질 추천 영화 검색 (평점 7.0 이상, 투표수 100 이상)
+    func fetchHighQualityMoviesByGenre(genreId: Int, page: Int = 1, completion: @escaping (Result<MovieResponse, TMDBError>) -> Void) {
+        guard let url = createHighQualityGenreURL(genreId: genreId, page: page) else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        print("🌟 고품질 장르 영화 검색: 장르ID \(genreId), URL: \(url)")
+        performRequest(url: url, responseType: MovieResponse.self, completion: completion)
+    }
+}
+
+// Private Helper Methods for Genre-based Search
+private extension TMDBService {
+    
+    /// 단일 장르 검색 URL 생성
+    func createGenreDiscoverURL(genreId: Int, page: Int) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.themoviedb.org"
+        components.path = "/3/discover/movie"
+        
+        let queryItems = [
+            URLQueryItem(name: "api_key", value: Config.tmdbAPIKey),
+            URLQueryItem(name: "language", value: "ko-KR"),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "with_genres", value: "\(genreId)"),
+            URLQueryItem(name: "sort_by", value: "popularity.desc"), // 인기순 정렬
+            URLQueryItem(name: "vote_count.gte", value: "50"), // 최소 투표수 50개 이상
+            URLQueryItem(name: "region", value: "KR") // 한국 지역
+        ]
+        
+        components.queryItems = queryItems
+        return components.url
+    }
+    
+    /// 복합 장르 검색 URL 생성
+    func createMultiGenreDiscoverURL(genreIds: [Int], page: Int) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.themoviedb.org"
+        components.path = "/3/discover/movie"
+        
+        let genreString = genreIds.map { String($0) }.joined(separator: ",")
+        
+        let queryItems = [
+            URLQueryItem(name: "api_key", value: Config.tmdbAPIKey),
+            URLQueryItem(name: "language", value: "ko-KR"),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "with_genres", value: genreString),
+            URLQueryItem(name: "sort_by", value: "vote_average.desc"), // 평점순 정렬
+            URLQueryItem(name: "vote_count.gte", value: "100"), // 최소 투표수 100개 이상
+            URLQueryItem(name: "region", value: "KR")
+        ]
+        
+        components.queryItems = queryItems
+        return components.url
+    }
+    
+    /// 고품질 장르 영화 URL 생성
+    func createHighQualityGenreURL(genreId: Int, page: Int) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.themoviedb.org"
+        components.path = "/3/discover/movie"
+        
+        let queryItems = [
+            URLQueryItem(name: "api_key", value: Config.tmdbAPIKey),
+            URLQueryItem(name: "language", value: "ko-KR"),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "with_genres", value: "\(genreId)"),
+            URLQueryItem(name: "sort_by", value: "vote_average.desc"), // 평점순
+            URLQueryItem(name: "vote_average.gte", value: "7.0"), // 평점 7.0 이상
+            URLQueryItem(name: "vote_count.gte", value: "100"), // 투표수 100개 이상
+            URLQueryItem(name: "region", value: "KR")
+        ]
+        
+        components.queryItems = queryItems
+        return components.url
+    }
+}

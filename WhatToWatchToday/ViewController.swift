@@ -12,22 +12,26 @@ import UIKit
 class ViewController: UIViewController {
     
     @IBOutlet weak var movieTableView: UITableView!
-    @IBOutlet weak var searchBar: UISearchBar!  // 새로 추가된 Storyboard Search Bar
+    @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var categorySegmentedControl: UISegmentedControl!
+    
+    var snackButton: UIButton!
 
-    var mediaItems: [MediaItem] = []  // 미디어 데이터를 저장할 배열
-    var allMediaItems: [MediaItem] = []  // 전체 미디어 목록 (검색용)
+    var mediaItems: [MediaItem] = []
+    var allMediaItems: [MediaItem] = []
     
     enum MediaCategory: Int, CaseIterable {
-        case movie = 0    // 🎬 영화 순위
-        case tv = 1       // 📺 TV 순위
-        case favorites = 2 // ❤️ 내 찜 목록
+        case movie = 0
+        case tv = 1
+        case favorites = 2
+        case recommendation = 3
         
         var title: String {
             switch self {
             case .movie: return "🎬 영화 순위"
             case .tv: return "📺 TV 순위"
             case .favorites: return "❤️ 내 찜 목록"
+            case .recommendation: return "🎯 맞춤추천"
             }
         }
     }
@@ -39,7 +43,8 @@ class ViewController: UIViewController {
         
         setupUI()
         setupTableView()
-        setupSearchBar()  // Search Bar 설정 추가
+        setupSearchBar()
+        setupSnackButton()
         loadDataForCategory(currentCategory)
     }
     
@@ -60,19 +65,16 @@ class ViewController: UIViewController {
     
     // TableView 설정
     func setupTableView() {
-        // 델리게이트 설정 (데이터 소스와 이벤트 처리)
+        // 델리게이트 설정
         movieTableView.delegate = self
         movieTableView.dataSource = self
-        
-        // 기본 셀 등록 (일단 기본 스타일 사용)
-        // movieTableView.register(UITableViewCell.self, forCellReuseIdentifier: "MovieCell")
         
         // TableView 스타일 설정
         movieTableView.separatorStyle = .singleLine
         movieTableView.showsVerticalScrollIndicator = true
         
         // 행 높이 설정
-        movieTableView.rowHeight = 120  // 포스터 이미지를 위해 높게 설정
+        movieTableView.rowHeight = 120
     }
     
     // Search Bar 설정
@@ -81,6 +83,44 @@ class ViewController: UIViewController {
         searchBar.placeholder = "영화나 TV 프로그램을 검색하세요"
         searchBar.searchBarStyle = .minimal
         searchBar.showsCancelButton = false
+    }
+    
+    // Floating 간식 버튼 설정
+    func setupSnackButton() {
+        snackButton = UIButton(type: .system)
+        snackButton.setTitle("🍿", for: .normal)
+        snackButton.titleLabel?.font = UIFont.systemFont(ofSize: 24, weight: .medium)
+        snackButton.setTitleColor(.white, for: .normal)
+        snackButton.backgroundColor = UIColor.systemOrange
+        
+        // 원형 모양
+        snackButton.layer.cornerRadius = 30
+        snackButton.clipsToBounds = false
+        
+        // 그림자 효과
+        snackButton.layer.shadowColor = UIColor.black.cgColor
+        snackButton.layer.shadowOffset = CGSize(width: 0, height: 4)
+        snackButton.layer.shadowRadius = 8
+        snackButton.layer.shadowOpacity = 0.25
+        
+        // Auto Layout 설정
+        snackButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(snackButton)
+        
+        // 제약조건 설정 (우측 하단 고정)
+        NSLayoutConstraint.activate([
+            snackButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            snackButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -50),
+            snackButton.widthAnchor.constraint(equalToConstant: 60),
+            snackButton.heightAnchor.constraint(equalToConstant: 60)
+        ])
+        
+        // 터치 이벤트 연결
+        snackButton.addTarget(self, action: #selector(snackButtonTouchDown), for: .touchDown)
+        snackButton.addTarget(self, action: #selector(snackButtonTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        snackButton.addTarget(self, action: #selector(snackButtonTapped), for: .touchUpInside)
+        
+        print("코드로 생성한 Floating 간식 버튼 완료")
     }
     
     // 검색 기능 (MultiSearch 사용)
@@ -126,6 +166,95 @@ class ViewController: UIViewController {
         loadDataForCategory(category)
     }
     
+    // 간식 버튼 터치 애니메이션
+    @objc func snackButtonTouchDown() {
+        UIView.animate(withDuration: 0.1) {
+            self.snackButton.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+            self.snackButton.alpha = 0.8
+        }
+    }
+
+    @objc func snackButtonTouchUp() {
+        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5) {
+            self.snackButton.transform = CGAffineTransform.identity
+            self.snackButton.alpha = 1.0
+        }
+    }
+
+    // 간식 버튼 메인 액션
+    @objc func snackButtonTapped() {
+        // 햅틱 피드백
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        // 간식 추천 표시
+        showSnackRecommendationOptions()
+        
+        print("Floating 간식 버튼 탭됨")
+    }
+
+    // 간식 추천 옵션 표시
+    func showSnackRecommendationOptions() {
+        let alert = UIAlertController(
+            title: "🍿 간식 추천 방식을 선택하세요",
+            message: "어떤 방식으로 추천받으시겠어요?",
+            preferredStyle: .actionSheet
+        )
+        
+        // 완전 랜덤 추천
+        alert.addAction(UIAlertAction(title: "🎲 완전 랜덤 추천", style: .default) { _ in
+            self.showSnackRecommendation()
+        })
+        
+        // 카테고리별 추천
+        alert.addAction(UIAlertAction(title: "🎯 카테고리별 추천", style: .default) { _ in
+            self.showCategorySnackRecommendation()
+        })
+        
+        // 간식 목록 보기
+        alert.addAction(UIAlertAction(title: "📋 간식 목록 보기", style: .default) { _ in
+            self.showAllSnacks()
+        })
+        
+        // 취소
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        
+        // iPad 대응
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = snackButton
+            popover.sourceRect = snackButton.bounds
+            popover.permittedArrowDirections = [.up, .left]
+        }
+        
+        present(alert, animated: true)
+    }
+
+    // 전체 간식 목록 보기
+    func showAllSnacks() {
+        var message = ""
+        
+        for category in SnackCategory.allCases {
+            let snacks = SnackRecommendationManager.shared.getSnacks(for: category)
+            message += "\n\(category.emoji) \(category.rawValue)\n"
+            message += snacks.map { $0.displayText }.joined(separator: ", ")
+            message += "\n"
+        }
+        
+        let alert = UIAlertController(
+            title: "🍿 전체 간식 목록",
+            message: message,
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "🎲 랜덤 추천", style: .default) { _ in
+            self.showSnackRecommendation()
+        })
+        
+        alert.addAction(UIAlertAction(title: "확인", style: .cancel))
+        
+        present(alert, animated: true)
+    }
+    
     func loadDataForCategory(_ category: MediaCategory) {
         switch category {
         case .movie:
@@ -134,6 +263,8 @@ class ViewController: UIViewController {
             loadPopularTV()
         case .favorites:
             loadFavorites()
+        case .recommendation:
+            loadRecommendations()
         }
     }
     
@@ -145,7 +276,6 @@ class ViewController: UIViewController {
             case .success(let movieResponse):
                 print("✅ 영화 \(movieResponse.results.count)개 로딩 완료!")
                 
-                // ✅ 영화 20개 전체 사용
                 let mediaItems = movieResponse.results.map { movie in
                     self?.convertMovieToMediaItem(movie) ?? MediaItem(
                         id: movie.id, mediaType: "movie", title: movie.title, name: nil,
@@ -174,7 +304,6 @@ class ViewController: UIViewController {
     
     func loadPopularTV() {
         print("📺 인기 TV 프로그램 로딩...")
-        // TODO: TV 프로그램 로딩 (나중에 구현)
         TMDBService.shared.fetchPopularTV { [weak self] result in
             switch result {
             case .success(let response):
@@ -232,11 +361,138 @@ class ViewController: UIViewController {
                 navigationItem.rightBarButtonItems = nil
                 navigationItem.title = "❤️ 찜목록 (비어있음)"
             }
-        } else {
+        } else if currentCategory != .recommendation {
             // 다른 탭일 때는 기본 상태
             navigationItem.rightBarButtonItems = nil
             navigationItem.title = "오늘은 뭐 보까?"
         }
+    }
+    
+    func loadRecommendations() {
+        print("🎯 맞춤 추천 로딩...")
+        
+        RecommendationManager.shared.getRecommendations { [weak self] result in
+            switch result {
+            case .success(let recommendationResult):
+                print("✅ 맞춤 추천 \(recommendationResult.recommendedMovies.count)개 로딩 완료!")
+                
+                DispatchQueue.main.async {
+                    self?.allMediaItems = recommendationResult.recommendedMovies
+                    self?.mediaItems = recommendationResult.recommendedMovies
+                    self?.movieTableView.reloadData()
+                    
+                    // 추천 품질 정보를 네비게이션 바에 표시
+                    self?.setupRecommendationNavigationBar(result: recommendationResult)
+                }
+                
+            case .failure(let error):
+                print("❌ 맞춤 추천 로딩 실패: \(error)")
+                DispatchQueue.main.async {
+                    self?.showRecommendationErrorAlert()
+                }
+            }
+        }
+    }
+
+    // 추천 화면 전용 네비게이션 바 설정
+    func setupRecommendationNavigationBar(result: RecommendationResult) {
+        if currentCategory == .recommendation {
+            navigationItem.title = "🎯 맞춤추천"
+            
+            // 분석 정보 버튼 추가
+            let infoButton = UIBarButtonItem(
+                image: UIImage(systemName: "info.circle"),
+                style: .plain,
+                target: self,
+                action: #selector(showRecommendationInfo)
+            )
+            
+            navigationItem.rightBarButtonItem = infoButton
+            
+            // 간단한 토스트로 품질 정보 표시
+            let qualityText = RecommendationManager.shared.getRecommendationQuality()
+            showRecommendationQualityToast(qualityText)
+        }
+    }
+
+    // 추천 정보 표시
+    @objc func showRecommendationInfo() {
+        RecommendationManager.shared.getRecommendations { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let recommendationResult):
+                    self?.showRecommendationDetailAlert(result: recommendationResult)
+                case .failure:
+                    self?.showRecommendationErrorAlert()
+                }
+            }
+        }
+    }
+
+    // 추천 상세 정보 Alert
+    func showRecommendationDetailAlert(result: RecommendationResult) {
+        var message = ""
+        
+        if result.preferredGenres.isEmpty {
+            message = """
+            아직 찜한 영화가 없어서 인기 영화를 추천드려요.
+            
+            🎬 더 많은 영화를 찜해주시면 취향에 맞는 맞춤 추천을 받을 수 있어요!
+            """
+        } else {
+            let genreNames = result.preferredGenres.map { $0.name }.joined(separator: ", ")
+            message = """
+            📊 분석 결과
+            
+            선호 장르: \(genreNames)
+            분석한 찜 목록: \(result.totalFavorites)개
+            추천 영화: \(result.recommendedMovies.count)개
+            
+            🎯 \(result.preferredGenres.first?.name ?? "선호 장르") 장르를 기반으로 추천드려요!
+            """
+        }
+        
+        let alert = UIAlertController(
+            title: "🎯 맞춤 추천 분석",
+            message: message,
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "새로고침", style: .default) { _ in
+            self.loadRecommendations()
+        })
+        
+        alert.addAction(UIAlertAction(title: "확인", style: .cancel))
+        
+        present(alert, animated: true)
+    }
+
+    // 추천 품질 토스트 메시지
+    func showRecommendationQualityToast(_ message: String) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        present(alert, animated: true)
+        
+        // 3초 후 자동으로 사라지게
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            alert.dismiss(animated: true)
+        }
+    }
+
+    // 추천 에러 Alert
+    func showRecommendationErrorAlert() {
+        let alert = UIAlertController(
+            title: "추천 오류",
+            message: "맞춤 추천을 가져오는데 문제가 발생했습니다. 네트워크를 확인해주세요.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "다시 시도", style: .default) { _ in
+            self.loadRecommendations()
+        })
+        
+        alert.addAction(UIAlertAction(title: "확인", style: .cancel))
+        
+        present(alert, animated: true)
     }
 
     // 정렬 옵션 표시
@@ -393,7 +649,7 @@ extension ViewController: UITableViewDataSource {
         return mediaItems.count
     }
     
-    // 각 행에 표시할 셀 (포스터 오류 수정됨)
+    // 각 행에 표시할 셀
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "MovieCell", for: indexPath)
         let mediaItem = mediaItems[indexPath.row]
@@ -409,15 +665,15 @@ extension ViewController: UITableViewDataSource {
         
         // 선택 스타일
         cell.selectionStyle = .default
-        cell.accessoryType = .disclosureIndicator  // > 화살표 표시
+        cell.accessoryType = .disclosureIndicator
         
-        // ✅ 포스터 이미지 로딩 (오류 수정됨)
+        // 포스터 이미지 로딩
         if let imageView = cell.imageView {
             // 고정 크기의 플레이스홀더 이미지 생성
             let placeholderSize = CGSize(width: 80, height: 120)
             let placeholder = createPlaceholderImage(size: placeholderSize)
             
-            // ✅ 중요: 먼저 플레이스홀더로 초기화 (셀 재사용 문제 해결)
+            // 먼저 플레이스홀더로 초기화
             imageView.image = placeholder
             
             // 이미지뷰 스타일 설정
@@ -425,18 +681,16 @@ extension ViewController: UITableViewDataSource {
             imageView.clipsToBounds = true
             imageView.layer.cornerRadius = 8
             
-            // ✅ 이전 다운로드 작업 취소 (중요!)
+            // 이전 다운로드 작업 취소
             if let urlString = mediaItem.fullPosterURL {
                 ImageCache.shared.cancelDownload(for: urlString)
             }
             
             // 실제 포스터 이미지 로딩
             ImageCache.shared.loadImage(from: mediaItem.fullPosterURL) { [weak imageView] loadedImage in
-                // ✅ imageView가 아직 유효한지 확인 (셀 재사용 대응)
                 guard let imageView = imageView else { return }
                 
                 if let loadedImage = loadedImage {
-                    // 로딩된 이미지를 고정 크기로 리사이즈
                     let resizedImage = loadedImage.resized(to: placeholderSize)
                     imageView.image = resizedImage
                 } else {
@@ -468,17 +722,15 @@ extension ViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         guard let searchText = searchBar.text else { return }
         searchMedia(query: searchText)
-        searchBar.resignFirstResponder()  // 키보드 숨기기
+        searchBar.resignFirstResponder()
     }
     
-    // 검색어가 변경될 때 (실시간 검색 - 선택사항)
+    // 검색어가 변경될 때
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchText.isEmpty {
-            // 검색어가 비어있으면 전체 목록 표시
             mediaItems = allMediaItems
             movieTableView.reloadData()
         } else if searchText.count >= 2 {
-            // 2글자 이상일 때 검색 (API 호출 줄이기)
             searchMedia(query: searchText)
         }
     }
@@ -487,7 +739,7 @@ extension ViewController: UISearchBarDelegate {
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         searchBar.text = ""
         searchBar.resignFirstResponder()
-        mediaItems = allMediaItems  // 전체 목록으로 복원
+        mediaItems = allMediaItems
         movieTableView.reloadData()
     }
 }
@@ -505,7 +757,7 @@ extension UIImage {
 // UITableViewDelegate 확장 (스와이프 삭제)
 extension ViewController {
     
-    // 스와이프 액션 설정 (iOS 11+)
+    // 스와이프 액션 설정
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         
         // 찜목록 탭일 때만 스와이프 삭제 활성화
@@ -524,7 +776,7 @@ extension ViewController {
         deleteAction.image = UIImage(systemName: "heart.slash.fill")
         
         let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
-        configuration.performsFirstActionWithFullSwipe = true  // 전체 스와이프로 바로 삭제
+        configuration.performsFirstActionWithFullSwipe = true
         
         return configuration
     }
@@ -571,7 +823,7 @@ extension ViewController {
 // 추가 편의 기능들
 extension ViewController {
     
-    // 찜목록 전체 삭제 (옵션)
+    // 찜목록 전체 삭제
     func clearAllFavorites() {
         let alert = UIAlertController(
             title: "찜 목록 전체 삭제",
@@ -582,13 +834,13 @@ extension ViewController {
         alert.addAction(UIAlertAction(title: "취소", style: .cancel))
         alert.addAction(UIAlertAction(title: "삭제", style: .destructive) { _ in
             FavoriteManager.shared.clearAllFavorites()
-            self.loadFavorites()  // 목록 새로고침
+            self.loadFavorites()
         })
         
         present(alert, animated: true)
     }
     
-    // 찜목록 정렬 (옵션)
+    // 찜목록 정렬
     func sortFavorites(by type: FavoriteSortType) {
         guard currentCategory == .favorites else { return }
         
@@ -616,7 +868,7 @@ extension ViewController {
 
 // 정렬 타입 열거형
 enum FavoriteSortType {
-    case newest    // 최신순
-    case title     // 제목순
-    case rating    // 평점순
+    case newest
+    case title
+    case rating
 }
