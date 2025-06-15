@@ -51,7 +51,7 @@
 - 실시간 검색 기능
 - 무한 스크롤 목록
 - 플로팅 간식 추천 버튼
-![image](https://github.com/user-attachments/assets/4ef74f14-e2f0-4f8b-96c2-b7e4044e8b95)
+<img width="372" alt="main1" src="https://github.com/user-attachments/assets/3cacb66b-07dd-4a46-b51c-0e7a464c850e" />
 
 
 #### 상세 정보 화면
@@ -60,7 +60,8 @@
 - 접기/펼치기 가능한 줄거리
 - 주요 배우 정보 (가로 스크롤)
 - 찜하기/찜 해제 기능
-![image](https://github.com/user-attachments/assets/109842f3-00de-45fd-a667-821000e46b06) ![image](https://github.com/user-attachments/assets/b2e49da1-f0c1-465e-aca4-959b1828f167)
+<img width="372" alt="detail1" src="https://github.com/user-attachments/assets/b3f843f5-ee10-4fa1-a048-bc8149518f64" />
+
 
 
 #### 찜 목록 관리 화면
@@ -68,14 +69,16 @@
 - 정렬 기능 (최신순, 제목순, 평점순)
 - 스와이프 삭제
 - 일괄 삭제 기능
-![image](https://github.com/user-attachments/assets/0e18e9e7-801d-43fa-a543-2058333a2fb2) ![image](https://github.com/user-attachments/assets/c7f28506-cbb7-4e79-b8ed-81d4bd999fe3)
+<img width="372" alt="zzim1" src="https://github.com/user-attachments/assets/8eb02a3f-d994-449f-8760-8f74e66d7ef8" />
+
 
 #### 간식 추천 화면
 - 완전 랜덤 추천
 - 카테고리별 추천
 - 전체 간식 목록 보기
 - 다시 뽑기 기능
-![image](https://github.com/user-attachments/assets/e1683146-e2d4-487c-9045-b00e4c56fb08) ![image](https://github.com/user-attachments/assets/228b03b2-026c-4348-98a2-8ed52b3ff553)
+![image](https://github.com/user-attachments/assets/4f462560-8394-44f2-9428-e7394ca166fd)
+
 
 
 ### 2.4 기대효과
